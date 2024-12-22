@@ -56,10 +56,3 @@ class Feat(SearchableElement):
     def from_name(cls, name, source: str = "CRB"):
         return SearchableElement.from_name(name=name, source=source, data_source=utils.load_feats())
     
-    
-if __name__ == "__main__":
-    import pathbuilder
-    build = pathbuilder.Build.from_json_id(182206)
-    feats = list(map(Feat.from_name, build["feats"]))
-    pass
-    
