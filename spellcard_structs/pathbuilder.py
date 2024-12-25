@@ -5,6 +5,7 @@ from typing import TypedDict
 
 import requests
 
+from utils import sources
 import utils.static as static
 
 
@@ -45,7 +46,7 @@ class Build(TypedDict):
     
     def get_proficiency_map(self):
         return {
-            name: static.BASE_PROFICIENCY_MAP[value - self["level"]]
+            name: sources.PROFICIENCY_BY_BONUS[value]
             for name, value 
-            in self["proficiency"].items()
+            in self["proficiencies"].items()
         }

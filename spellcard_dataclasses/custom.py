@@ -3,26 +3,10 @@ from dataclasses import dataclass
 from itertools import starmap
 import re
 
-import pandas as pd
-import webcolors
-
 from spellcard_structs.card import RPGCard
 from spellcard_structs.pathbuilder import Build
 from spellcard_structs.pf2etools import Feat, Action, from_raw_dict
-import utils
 import utils.sources as sources
-import utils.static as static
-
-
-PROFICIENCY_NAMES = [
-    *static.BASE_PROFICIENCY_MAP.keys(),
-    *map(str.capitalize, static.BASE_PROFICIENCY_MAP.keys())
-]
-PROFICIENCY_RESTRICTION_FORMAT = r"({})(.*({}).*)+".format(
-    "|".join(map("({})".format, PROFICIENCY_NAMES)),
-    "{}"
-)
-
 
 @dataclass
 class CharacterData:
@@ -35,7 +19,6 @@ class CharacterData:
         basic_actions = cls.actions_from_proficiencies(
                 cls=cls,
                 proficiency_levels=Build.get_proficiency_map(build),
-                proficiency_values=build["proficiency"]
         )
         
         return cls(
@@ -51,21 +34,24 @@ class CharacterData:
             actions.extend(Feat.get_all_actions(feat_data))
         return actions
     
-    def actions_from_proficiencies(cls, proficiency_levels: dict[str, str], proficiency_values: dict[str, int]):        
+    def actions_from_proficiencies(cls, proficiency_levels: dict[str, str]):        
         actions = []
         for (name, source, _), action in sources.ACTION_DATA.iterrows():
-            required_skills = action.get("actionType", {}).get("skill")
+            required_skills = (action.get("actionType") or {}).get("skill", {})
             proficient = True
             skill_pairs = ((level, skill) for level, skills in required_skills.items() for skill in skills)
-
-            for skill, level in skill_pairs:
-                char_prof = utils.static.BASE_PROFICIENCY_MAP[proficiency_levels[skill]]
-                req_pro = utils.static.BASE_PROFICIENCY_MAP[level]
-                if char_prof < req_pro:
-                    proficient = False
-                    break
             
-            if not proficient:
+            proficient = set()
+            
+            for level, skill in skill_pairs:
+                char_prof = sources.BONUS_BY_PROFICIENCY[proficiency_levels[skill]]
+                req_pro = sources.BONUS_BY_PROFICIENCY[level]
+                if char_prof < req_pro:
+                    proficient = set()
+                    break
+                proficient.add(level)
+                
+            if not proficient or proficient == {"untrained"}:
                 continue
 
             actions.append(Action.from_name(name=name, source=source))
@@ -91,6 +77,8 @@ class CharacterData:
                 return action_format.format("reaction")
             case {"unit": "free"}:
                 return action_format.format("free-action")
+            case unhandled:
+                raise ValueError(f"unhadled case: {unhandled} icon for {action['name']}")
     
     def format_list_items(self, items: list[dict]):
         for item in items:
