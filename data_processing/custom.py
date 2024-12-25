@@ -6,11 +6,11 @@ import re
 import pandas as pd
 import webcolors
 
-from card import RPGCard
-from pathbuilder import Build
-from pf2etools import Feat, Action
-import sources
-import static
+from structs.card import RPGCard
+from structs.pathbuilder import Build
+from structs.pf2etools import Feat, Action
+import utils.sources as sources
+import utils.static as static
 
 
 PROFICIENCY_NAMES = [

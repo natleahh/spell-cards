@@ -6,8 +6,8 @@ from typing import Literal, Optional, Self, TypedDict
 
 import pandas as pd
 
-import sources
-import static
+import utils.sources as sources
+import utils.static as static
 import utils
 
 LEGACY_CHANGES = [

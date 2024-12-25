@@ -5,7 +5,7 @@ from typing import TypedDict
 
 import requests
 
-import static
+import utils.static as static
 
 
 class Feat(list[str]):

@@ -6,7 +6,7 @@ from pathlib import Path
 import numpy as np
 import pandas as pd
 
-import static
+import utils.static as static
      
 def get_data_path():
     path = Path(static.DATA_PATH)
