@@ -64,9 +64,9 @@ class Action(TypedDict):
     name: str
     source: str
     traits: list[str]
-    activity: Activity
+    activity: Activity = None
     trigger: Optional[str]
-    requirements: Optional[str]
+    requirements: Optional[str] = None
     entries: list[str | dict]
     
     @classmethod
@@ -131,6 +131,7 @@ class Feat(TypedDict):
                     for action_name, _, source in
                     re.findall(r"@action ([^\|}]+)(\|(\w+))?", entry)
                 )
+                all_actions.append(self)
             elif isinstance(entry, dict) and entry.get("activity") is not None:
                 all_actions.append(from_raw_dict(Action, entry))
 

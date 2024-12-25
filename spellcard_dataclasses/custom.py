@@ -6,9 +6,9 @@ import re
 import pandas as pd
 import webcolors
 
-from structs.card import RPGCard
-from structs.pathbuilder import Build
-from structs.pf2etools import Feat, Action
+from spellcard_structs.card import RPGCard
+from spellcard_structs.pathbuilder import Build
+from spellcard_structs.pf2etools import Feat, Action, from_raw_dict
 import utils.sources as sources
 import utils.static as static
 
@@ -113,7 +113,7 @@ class CharacterData:
             traits.append("p2e_end_trait_section")
             traits.append("ruler")
         
-        if action["requirements"]:
+        if action.get("requirements"):
             content.append(f"property | Requirements | {action['requirements']}")
         
         for entry in action["entries"]:
@@ -123,6 +123,8 @@ class CharacterData:
                 content.extend(starmap("property | {} | {}".format, entry["entries"].items()))
             elif entry["type"] == "list":
                 content.extend(self.format_list_items(entry["items"]))
+            elif entry["type"] == "ability":
+                return self.get_text_body(from_raw_dict(Action, entry))
             else:
                 raise ValueError(f"{action['name']} has unsupported entry")
         content = [

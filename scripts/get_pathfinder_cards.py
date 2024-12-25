@@ -5,8 +5,8 @@ from pathlib import Path
 import sys
 from typing import Optional
 
-from dataclasses.custom import CharacterData
-from structs.pathbuilder import Build
+from spellcard_dataclasses.custom import CharacterData
+from spellcard_structs.pathbuilder import Build
 
 
 def parse_cli_args(argv: Optional[list[str]]):
