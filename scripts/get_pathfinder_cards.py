@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 from typing import Optional
 
-from data_processing.custom import CharacterData
+from dataclasses.custom import CharacterData
 from structs.pathbuilder import Build
 
 
