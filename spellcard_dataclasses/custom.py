@@ -9,6 +9,7 @@ import webcolors
 from spellcard_structs.card import RPGCard
 from spellcard_structs.pathbuilder import Build
 from spellcard_structs.pf2etools import Feat, Action, from_raw_dict
+import utils
 import utils.sources as sources
 import utils.static as static
 
@@ -30,34 +31,48 @@ class CharacterData:
     
     @classmethod
     def from_pathbuilder_build(cls, build: Build):
+        feat_action = cls.actions_from_feat_names(cls=cls, feat_names=Build.get_all_feat_names(build))
+        basic_actions = cls.actions_from_proficiencies(
+                cls=cls,
+                proficiency_levels=Build.get_proficiency_map(build),
+                proficiency_values=build["proficiency"]
+        )
+        
+        return cls(
+            actions=Action.get_unique([*feat_action, *basic_actions])
+        )
+    
+    def actions_from_feat_names(cls, feat_names: list[str]):
         actions = []
-        for feat_name in Build.get_all_feat_names(build):
+        for feat_name in feat_names:
             feat_data = Feat.from_name(feat_name)
             if feat_data is None:
                 continue
             actions.extend(Feat.get_all_actions(feat_data))
-        
-        proficiency_names = [
-            *build["proficiencies"],
-            *map(str.capitalize, build["proficiencies"])
-        ]
-        pattern = PROFICIENCY_RESTRICTION_FORMAT.format(
-            "|".join(map("({})".format, proficiency_names))
-        )
+        return actions
+    
+    def actions_from_proficiencies(cls, proficiency_levels: dict[str, str], proficiency_values: dict[str, int]):        
+        actions = []
         for (name, source, _), action in sources.ACTION_DATA.iterrows():
-            result = re.search(pattern, action.get("requirements") or "")
-            if result is None:
-                continue
-            proficiency, skill = result.group(1, 13)
-            build_level = build["proficiencies"][skill.lower()] - build["level"]
-            requred_level = static.BASE_PROFICIENCY_MAP[proficiency.lower()]
-            if build_level < requred_level:
-                continue
-            Action.from_name(name=name, source=source)
+            required_skills = action.get("actionType", {}).get("skill")
+            proficient = True
+            skill_pairs = ((level, skill) for level, skills in required_skills.items() for skill in skills)
 
-        return cls(
-            actions=Action.get_unique(actions)
-        )
+            for skill, level in skill_pairs:
+                char_prof = utils.static.BASE_PROFICIENCY_MAP[proficiency_levels[skill]]
+                req_pro = utils.static.BASE_PROFICIENCY_MAP[level]
+                if char_prof < req_pro:
+                    proficient = False
+                    break
+            
+            if not proficient:
+                continue
+
+            actions.append(Action.from_name(name=name, source=source))
+        return actions
+            
+
+
     
     @classmethod
     def from_pathbuilder_json_id(cls, json_id: int):
@@ -159,7 +174,6 @@ class CharacterData:
     
     def get_card_from_action_name(self, action_name):
         return self.get_card_from_action(action=Action.from_name(action_name))
-    
     
     def get_all_cards(self):
         return [
