@@ -23,6 +23,11 @@ def parse_cli_args(argv: Optional[list[str]]):
         "--json_path",
         type=Path,
     )
+    
+    parser.add_argument(
+        "--outpath", "-o",
+        type=str,
+    )
     return parser.parse_args(argv)
 
 def main(argv: Optional[list[str]] = None):
@@ -30,13 +35,13 @@ def main(argv: Optional[list[str]] = None):
     if args.json_id:
         build = Build.from_json_id(args.json_id)
     else:
-        build = Build.from_json(json.loads(args.json_path.read_text()))
+        build = Build.from_json(args.json_path.read_text())
 
     character = CharacterData.from_pathbuilder_build(build)
     cards = character.get_all_cards()
 
-    with open(args.outpath or sys.stdout) as output:
-        output.write(json.dumps(cards, indent=4))
+    with (open(args.outpath, "w") if args.outpath is not None else sys.stdout) as output:
+        json.dump(cards, output, indent=4)
             
 
 if __name__ == "__main__":
