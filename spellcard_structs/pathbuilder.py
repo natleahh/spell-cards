@@ -43,7 +43,6 @@ class Build(TypedDict):
             *self["specials"]
         ]
     
-    @cache
     def get_proficiency_map(self):
         return {
             name: static.BASE_PROFICIENCY_MAP[value - self["level"]]
