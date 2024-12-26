@@ -1,21 +1,34 @@
 
 from functools import cache
+import getpass
 import json
+import os
 from pathlib import Path
 
 import numpy as np
 import pandas as pd
 
 import utils.static as static
+
+def get_env_variable(variable: str, prompt=False, secret=False):
+    try:
+        return os.environ[variable]
+    except KeyError:
+        value_getter = getpass.getpass if secret else input
+        if prompt:
+            return value_getter(f"Please input {variable}: ")
+        raise EnvironmentError(f"No environment variable {variable}")
+            
      
-def get_data_path():
-    path = Path(static.DATA_PATH)
+def get_data_path(data_path_variable: str):
+    path = Path(get_env_variable(data_path_variable))
+    path = path if path.name == "data" else path / "data"
     if not path.exists():
-        raise FileNotFoundError(f"DATA_PATH: {path} does not exist.")
+        raise FileNotFoundError(f"{data_path_variable}: {path} does not exist.")
     return path
 
 def get_feats_index():
-    with (get_data_path() / "feats/index.json").open() as index_file:
+    with (get_data_path("PATHFINDER_DATA_PATH") / "feats/index.json").open() as index_file:
         return json.load(index_file)
 
 def prepare_df(df: pd.DataFrame):
@@ -23,7 +36,7 @@ def prepare_df(df: pd.DataFrame):
 
 @cache
 def load_feats():
-    data_path =  get_data_path()
+    data_path =  get_data_path("PATHFINDER_DATA_PATH")
     feat_path = data_path / "feats"
     index_data = get_feats_index()
     all_feats = [
@@ -51,7 +64,7 @@ def load_feats():
 
 @cache
 def load_actions():
-    action_data = json.loads((get_data_path() / "actions.json").read_text())
+    action_data = json.loads((get_data_path("PATHFINDER_DATA_PATH") / "actions.json").read_text())
     base_df =  pd.DataFrame(action_data["action"])
     return prepare_df(base_df)
 
