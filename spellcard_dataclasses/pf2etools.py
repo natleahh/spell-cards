@@ -25,7 +25,7 @@ class PF2EAbstract(abc.ABC):
 		filtered_data = {
 			k: v.from_raw_dict() if "from_raw_dict" in type(v).__dict__ else v
 			for k, v 
-			in data.items() if k in constructor.__annotations__
+			in data.items() if k in cls.__annotations__
 		}
 		
 		return cls(filtered_data)

@@ -5,7 +5,7 @@ import re
 
 from spellcard_structs.card import RPGCard
 from spellcard_structs.pathbuilder import Build
-from spellcard_structs.pf2etools import Feat, Action, from_raw_dict
+from spellcard_structs.pf2etools import Feat, Action
 import utils.sources as sources
 
 @dataclass
@@ -127,7 +127,7 @@ class CharacterData:
             elif entry["type"] == "list":
                 content.extend(self.format_list_items(entry["items"]))
             elif entry["type"] == "ability":
-                return self.get_text_body(from_raw_dict(Action, entry))
+                return self.get_text_body(Action.from_raw_dict(entry))
             else:
                 raise ValueError(f"{action['name']} has unsupported entry")
         content = [
