@@ -1,84 +1,11 @@
-
-from dataclasses import dataclass
 from itertools import starmap
 import re
 
 from spellcard_structs.card import RPGCard
-from spellcard_structs.pathbuilder import Build
-from spellcard_structs.pf2etools import Feat, Action
+from spellcard_dataclasses import pathbuilder, pf2etools
 import utils.sources as sources
 
-@dataclass
-class CharacterData:
-
-    actions: list[Action]
-    
-    @classmethod
-    def from_pathbuilder_build(cls, build: Build):
-        feat_action = cls.actions_from_feat_names(cls=cls, feat_names=Build.get_all_feat_names(build))
-        basic_actions = cls.actions_from_proficiencies(
-                cls=cls,
-                proficiency_levels=Build.get_proficiency_map(build),
-        )
-        
-        return cls(
-            actions=Action.get_unique([*feat_action, *basic_actions])
-        )
-    
-    def actions_from_feat_names(cls, feat_names: list[str]):
-        actions = []
-        for feat_name in feat_names:
-            feat_data = Feat.from_name(feat_name)
-            if feat_data is None:
-                continue
-            actions.extend(Feat.get_all_actions(feat_data))
-        return actions
-    
-    def actions_from_proficiencies(cls, proficiency_levels: dict[str, str]):        
-        actions = []
-        for (name, source, _), action in sources.ACTION_DATA.iterrows():
-            required_skills = (action.get("actionType") or {}).get("skill", {})
-            proficient = True
-            skill_pairs = ((level, skill) for level, skills in required_skills.items() for skill in skills)
-            
-            proficient = set()
-            
-            for level, skill in skill_pairs:
-                char_prof = sources.BONUS_BY_PROFICIENCY[proficiency_levels[skill]]
-                req_pro = sources.BONUS_BY_PROFICIENCY[level]
-                if char_prof < req_pro:
-                    proficient = set()
-                    break
-                proficient.add(level)
-                
-            if not proficient or proficient == {"untrained"}:
-                continue
-
-            actions.append(Action.from_name(name=name, source=source))
-        return actions
-            
-
-
-    
-    @classmethod
-    def from_pathbuilder_json_id(cls, json_id: int):
-        return cls.from_pathbuilder_build(Build.from_json_id(json_id))
-    
-    @staticmethod
-    def get_icon(action):
-        action_format = "p2e-{}"
-        match action.get("activity", {}):
-            case None:
-                return None
-            case {"unit": "action", "number": n}:
-                action_format = action_format.format("{}-action{}")
-                return action_format.format(n, "s" if n > 1 else "")
-            case {"unit": "reaction"}:
-                return action_format.format("reaction")
-            case {"unit": "free"}:
-                return action_format.format("free-action")
-            case unhandled:
-                raise ValueError(f"unhadled case: {unhandled} icon for {action['name']}")
+class CardFactor(list):
     
     def format_list_items(self, items: list[dict]):
         for item in items:
@@ -102,9 +29,77 @@ class CharacterData:
             sublists[-1].append(line)
         
         return [*filter(bool, sublists)]
+
+
+class PathFinderActions(list[pf2etools.Action]):
+    
+    @classmethod
+    def from_pathbuilder_build(cls, build: pathbuilder.Build):
+        feat_action = cls.actions_from_feat_names(cls=cls, feat_names=pathbuilder.Build.get_all_feat_names(build))
+        basic_actions = cls.actions_from_proficiencies(
+                cls=cls,
+                proficiency_levels=pathbuilder.Build.get_proficiency_map(build),
+        )
+        
+        return cls(
+            pf2etools.Action.get_unique([*feat_action, *basic_actions])
+        )
+    
+    def actions_from_feat_names(cls, feat_names: list[str]):
+        actions = []
+        for feat_name in feat_names:
+            feat_data = pf2etools.Feat.from_name(feat_name)
+            if feat_data is None:
+                continue
+            actions.extend(pf2etools.Feat.get_all_actions(feat_data))
+        return actions
+    
+    def actions_from_proficiencies(cls, proficiency_levels: dict[str, str]):        
+        actions = []
+        for (name, source, _), action in sources.ACTION_DATA.iterrows():
+            required_skills = (action.get("actionType") or {}).get("skill", {})
+            proficient = True
+            skill_pairs = ((level, skill) for level, skills in required_skills.items() for skill in skills)
+            
+            proficient = set()
+            
+            for level, skill in skill_pairs:
+                char_prof = sources.BONUS_BY_PROFICIENCY[proficiency_levels[skill]]
+                req_pro = sources.BONUS_BY_PROFICIENCY[level]
+                if char_prof < req_pro:
+                    proficient = set()
+                    break
+                proficient.add(level)
+                
+            if not proficient or proficient == {"untrained"}:
+                continue
+
+            actions.append(pf2etools.Action.from_name(name=name, source=source))
+        return actions
+            
+
+    @classmethod
+    def from_pathbuilder_json_id(cls, json_id: int):
+        return cls.from_pathbuilder_build(pathbuilder.Build.from_json_id(json_id))
+    
+    @staticmethod
+    def get_icon(action):
+        action_format = "p2e-{}"
+        match action.get("activity", {}):
+            case None:
+                return None
+            case {"unit": "action", "number": n}:
+                action_format = action_format.format("{}-action{}")
+                return action_format.format(n, "s" if n > 1 else "")
+            case {"unit": "reaction"}:
+                return action_format.format("reaction")
+            case {"unit": "free"}:
+                return action_format.format("free-action")
+            case unhandled:
+                raise ValueError(f"unhadled case: {unhandled} icon for {action['name']}")
     
     
-    def get_text_body(self, action: Action):        
+    def get_text_body(self, action: pf2etools.Action):        
         traits = []
         content = []
         
@@ -127,7 +122,7 @@ class CharacterData:
             elif entry["type"] == "list":
                 content.extend(self.format_list_items(entry["items"]))
             elif entry["type"] == "ability":
-                return self.get_text_body(Action.from_raw_dict(entry))
+                return self.get_text_body(pf2etools.Action.from_raw_dict(entry))
             else:
                 raise ValueError(f"{action['name']} has unsupported entry")
         content = [
@@ -138,7 +133,7 @@ class CharacterData:
         return [[*traits, *sub_list] for sub_list in sub_lists]
             
 
-    def get_card_from_action(self, action: Action):
+    def get_card_from_action(self, action: pf2etools.Action):
         icon = self.get_icon(action)
         contents = self.get_text_body(action)
         cards = []
@@ -161,11 +156,11 @@ class CharacterData:
         return cards
     
     def get_card_from_action_name(self, action_name):
-        return self.get_card_from_action(action=Action.from_name(action_name))
+        return self.get_card_from_action(action=pf2etools.Action.from_name(action_name))
     
     def get_all_cards(self):
         return [
             card
-            for action in self.actions
+            for action in self
             for card in self.get_card_from_action(action)
         ]
