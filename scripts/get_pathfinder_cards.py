@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 from typing import Optional
 
-from spellcard_dataclasses.custom import CharacterData
+from spellcard_dataclasses.custom import PathFinderActions
 from spellcard_structs.pathbuilder import Build
 
 
@@ -37,7 +37,7 @@ def main(argv: Optional[list[str]] = None):
     else:
         build = Build.from_json(args.json_path.read_text())
 
-    character = CharacterData.from_pathbuilder_build(build)
+    character = PathFinderActions.from_pathbuilder_build(build)
     cards = character.get_all_cards()
 
     with (open(args.outpath, "w") if args.outpath is not None else sys.stdout) as output:
