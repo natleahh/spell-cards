@@ -68,6 +68,13 @@ def load_actions():
     base_df =  pd.DataFrame(action_data["action"])
     return prepare_df(base_df)
 
-    
-    
-        
+def load_dnd_5e_spells(sources: list[str]):
+    spells_path = get_data_path("DND_DATA_PATH") / "spells"
+    source_index = json.loads((spells_path / "index.json").read_text())
+    spell_data = []
+    for source in sources:
+        source_name = source_index[source]
+        source_path = spells_path / source_name
+        source_spells = json.loads(source_path.read_text())
+        spell_data.extend(source_spells["spell"])
+    return prepare_df(pd.DataFrame(spell_data))
