@@ -1,12 +1,9 @@
-import abc
 import itertools
-import logging
 import re
 from typing import Optional, Self
 from spellcard_dataclasses import common
 from spellcard_structs import pf2etools
 from utils import sources, static
-import pandas as pd
 
 
 LEGACY_CHANGES = [
@@ -21,35 +18,17 @@ def legacy_compat(name: str):
         return re.sub(pattern, sub, name)
     return name
 
-class PF2EStruct(common.StructCommon, abc.ABC):
-		
-	@classmethod
-	def from_name(cls, name: str, source: Optional[str], data_source: pd.DataFrame): # type: ignore
-		name = legacy_compat(name)
-		try: 
-			query = data_source.loc[name]
-		except:
-			logging.error(f"No record called {name} in database.")
-			return
-		if query.size > 1:
-			try:
-				query = query.loc[source].head(1)
-			except:
-				query = query.sort_values(
-					by="source",
-					key=lambda col: col.map(lambda v: 255 if v not in static.SOURCES else static.SOURCES.index(v))
-				).head(1)
-				source = query.index.to_list()[0][0]
-		raw_dict = query.replace(float("nan"), None).squeeze().to_dict()
-		return cls.from_raw_dict(raw_dict={"name": name, "source": raw_dict.get("source") or source, **raw_dict})
-	
-class Action(PF2EStruct):
+class LegacySupport:
+    
+    @staticmethod
+    def legacy_compatbility(name):
+        return legacy_compat(name)
+
+class Action(LegacySupport, common.DBItemCommon):
     
     STRUCTURE = pf2etools.Action
-    
-    @classmethod
-    def from_name(cls, name: str, source: Optional[str] = None):
-        return super().from_name(name=name, source=source, data_source=sources.ACTION_DATA)
+    SOURCES = static.SOURCES
+    DATA = sources.ACTION_DATA
     
     def get_source_index(self):
         try:
@@ -76,14 +55,12 @@ class Action(PF2EStruct):
         return [actions[0] for actions in by_name.values()]
 
 
-class Feat(PF2EStruct):
+class Feat(LegacySupport, common.DBItemCommon):
     
     STRUCTURE = pf2etools.Feat
-    
-    @classmethod
-    def from_name(cls, name: str, source: Optional[str] = None):
-        return super().from_name(name=name, source=source, data_source=sources.FEAT_DATA)
-    
+    SOURCES = static.SOURCES
+    DATA = sources.FEAT_DATA
+        
     def get_all_actions(self):
  
         all_actions = []

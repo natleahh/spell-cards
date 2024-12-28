@@ -1,15 +1,46 @@
 import json
-from typing import TypedDict
+import logging
+from typing import TypedDict, Optional
 
+import pandas as pd
 import requests
 
 
 class StructCommon(dict):
-    STRUCTURE: type[TypedDict] = TypedDict
+    STRUCTURE: type[TypedDict]
         
     @classmethod
     def from_raw_dict(cls, raw_dict):
         return cls(cls.STRUCTURE(raw_dict))
+    
+    
+class DBItemCommon(StructCommon):
+    SOURCES: list
+    DATA: pd.DataFrame
+            
+    @classmethod
+    def from_name(cls, name: str, source: Optional[str] = None): # type: ignore
+        name = cls.legacy_compatbility(name)
+        try: 
+            query = cls.DATA.loc[name]
+        except:
+            logging.error(f"No record called {name} in database.")
+            return
+        if query.size > 1:
+            try:
+                query = query.loc[source].head(1)
+            except:
+                query = query.sort_values(
+                    by="source",
+                    key=lambda col: col.map(lambda v: 255 if v not in cls.SOURCES else cls.SOURCES.index(v))
+                ).head(1)
+                source = query.index.to_list()[0][0]
+        raw_dict = query.replace(float("nan"), None).squeeze().to_dict()
+        return cls.from_raw_dict(raw_dict={"name": name, "source": raw_dict.get("source") or source, **raw_dict})
+
+    @staticmethod
+    def legacy_compatbility(name: str):
+        return name
     
 class CommonBuild(StructCommon):
     
