@@ -26,6 +26,10 @@ class Build(common.CommonBuild):
         )
         return [*actions]
     
+    @property
+    def all_spell_names(self):
+        return [*map(self.get_name, self.all_spells)]
+    
     @staticmethod
     def get_name(action):
         return action.get("name") or action["definition"]["name"]

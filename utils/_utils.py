@@ -78,3 +78,13 @@ def load_dnd_5e_spells(sources: list[str]):
         source_spells = json.loads(source_path.read_text())
         spell_data.extend(source_spells["spell"])
     return prepare_df(pd.DataFrame(spell_data))
+
+def word_list(*words: str, sep=",", join="and"):
+    match words:
+        case [w]:
+            return w
+        case [a, b]:
+            return " ".join([a, join, b])
+        case [*ws, a, b]:
+            return "{} {}".format(f"{sep} ".join(ws), word_list(a, b, join=join))
+        

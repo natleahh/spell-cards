@@ -2,7 +2,7 @@ from itertools import starmap
 import re
 
 from spellcard_structs.card import RPGCard
-from spellcard_dataclasses import pathbuilder, pf2etools
+from spellcard_dataclasses import dnd5etools, dndbeyond, pathbuilder, pf2etools
 import utils.sources as sources
 
 class CardFactor(list):
@@ -20,7 +20,7 @@ class CardFactor(list):
         sublists = [[]]
         
         for line in content:
-            sub_line_count = len(line.split(" | ")[-1]) // 45
+            sub_line_count = len(line.split(" | ")[-1]) // 20
             line_count += sub_line_count + 2
             if line_count > 20:
                 sublists[-1].append("text | cont.")
@@ -30,6 +30,83 @@ class CardFactor(list):
         
         return [*filter(bool, sublists)]
 
+class Dnd5eSpells(CardFactor):
+    
+    @classmethod
+    def from_dndbeyond_build(cls, build: dndbeyond.Build):
+        return cls(map(dnd5etools.Spell.from_name, build.all_spell_names))
+    
+    @classmethod
+    def from_dndbeyond_id(cls, id: int):
+        return cls.from_dndbeyond_build(dndbeyond.Build.from_json_id(id))
+    
+    def get_text_body(self, spell: dnd5etools.Spell):        
+        traits = [
+            "subtitle | {} {}".format(spell.get_spell_level().capitalize(), spell.get_school().capitalize()),
+            "rule"
+        ]
+        
+        for property, details in spell.get_header_data().items():
+            if details is None:
+                continue
+            traits.append(f"property | {property} | {details}")
+            
+        traits.append("rule")
+        
+        content = []
+        
+        for entry in spell["entries"]:
+            if isinstance(entry, str):
+                content.append(f"text | {entry}")
+            # elif entry["type"] == "successDegree":
+            #     content.extend(starmap("property | {} | {}".format, entry["entries"].items()))
+            elif entry["type"] == "list":
+                content.extend(map("bullet | {}".format, entry["items"]))
+            elif entry["type"] == "entries":
+                a, *b = entry["entries"]
+                content.append(f"property | {entry['name']} | {a}")
+                content.extend(map("text | {}".format, b))
+            elif entry["type"] == "table":
+                for rows in [entry['colLabels'], *entry['rows']]:
+                    content.append(" | ".join(["bullet", *rows]))
+            else:
+                raise ValueError(f"{spell['name']} has unsupported entry")
+        content = [
+            re.sub(r"{\@\w+ ([\w\s]*\|){0,2}?([\w\s]+)(\|[A-Z0-9]{2,4})?}", r"\g<2>", entry)
+            for entry in content
+        ]
+        sub_lists = self.split_content(content)
+        return [[*traits, *sub_list] for sub_list in sub_lists]
+        
+    
+    def get_card_from_spell(self, spell: dnd5etools.Spell): 
+        icon = "white-book-{}".format(spell["level"])
+        contents = self.get_text_body(spell)
+        cards = []
+        for i, content in enumerate(contents, 1):
+            title = "{}{}".format(
+                spell["name"],
+                f" ({i}/{len(contents)})" if len(contents) > 1 else  ""
+            )
+            card = RPGCard(
+                title=title,
+                count=1,
+                color="Chocolate",
+                icon=icon,
+                icon_back="",
+                contents=content,
+                tags=[]
+            )
+            
+            cards.append(card)
+        return cards
+    
+    def get_all_cards(self):
+        return [
+            card
+            for spell in self
+            for card in self.get_card_from_spell(spell)
+        ]
 
 class PathFinderActions(CardFactor):
     
