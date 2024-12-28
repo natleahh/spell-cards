@@ -11,26 +11,26 @@ class Feat(pathbuilder.Feat):
 	def name(self):
 		return self[0]
 
-class Build(common.StructCommon):
+class Build(common.CommonBuild):
     
     STRUCTURE = pathbuilder.Build
 	
-    def from_json_id(id: int):
+    @classmethod
+    def from_json_id(cls, id: int):
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0", "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
-        with requests.get(f"https://pathbuilder2e.com/json.php?id={id:06d}", headers=headers) as response:
-            response.raise_for_status()
-            return Build.from_json(response.text)
+        return cls._from_url(
+            "build",
+            "https://pathbuilder2e.com/json.php?id={:06d}",
+            (id,),
+            headers=headers,
+        )
     
     @classmethod
     def from_json(cls, json_data: str):
-        build_data = json.loads(json_data)["build"]
-        return super().from_raw_dict(raw_dict=build_data)
-        # return Build(
-        #     level=build_data["level"],
-        #     feats=list(map(Feat, build_data["feats"])),
-        #     specials=build_data["specials"],
-        #     proficiencies=build_data["proficiencies"]
-        # )
+        return cls._from_json_data(
+            json_data,
+            "build",
+        )
     
     def get_all_feat_names(self):
         return [
