@@ -19,15 +19,17 @@ class Build(common.CommonBuild):
             )
     
     @property
-    def all_actions(self):
+    def all_spells(self):
         actions = itertools.chain(
             itertools.chain.from_iterable(classSpell.get("spells") for classSpell in self["classSpells"]),
-            *filter(bool, self["actions"].values()),
             *filter(bool, self["spells"].values())
         )
         return [*actions]
     
+    @staticmethod
+    def get_name(action):
+        return action.get("name") or action["definition"]["name"]
+    
     @property
-    def all_action_names(self):
-        return [action["name"] if "name" in action else action["definition"]["name"] for action in self.all_actions]
-        
+    def all_actions(self):
+        return [*filter(bool, self["actions"].values())]
