@@ -5,9 +5,7 @@ from pathlib import Path
 import sys
 from typing import Optional
 
-from spellcard_dataclasses.custom import PathFinderActions
-from spellcard_structs.pathbuilder import Build
-
+from spellcard_dataclasses import custom, pathbuilder
 
 def parse_cli_args(argv: Optional[list[str]]):
     parser = argparse.ArgumentParser()
@@ -33,11 +31,11 @@ def parse_cli_args(argv: Optional[list[str]]):
 def main(argv: Optional[list[str]] = None):
     args = parse_cli_args(argv)
     if args.json_id:
-        build = Build.from_json_id(args.json_id)
+        build = pathbuilder.Build.from_json_id(args.json_id)
     else:
-        build = Build.from_json(args.json_path.read_text())
+        build = pathbuilder.Build.from_json(args.json_path.read_text())
 
-    character = PathFinderActions.from_pathbuilder_build(build)
+    character = custom.PathFinderActions.from_pathbuilder_build(build)
     cards = character.get_all_cards()
 
     with (open(args.outpath, "w") if args.outpath is not None else sys.stdout) as output:

@@ -31,7 +31,7 @@ class CardFactor(list):
         return [*filter(bool, sublists)]
 
 
-class PathFinderActions(list[pf2etools.Action]):
+class PathFinderActions(CardFactor):
     
     @classmethod
     def from_pathbuilder_build(cls, build: pathbuilder.Build):

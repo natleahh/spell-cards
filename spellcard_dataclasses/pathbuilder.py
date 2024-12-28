@@ -1,6 +1,7 @@
 import json
 
 import requests
+from spellcard_dataclasses import common
 from spellcard_structs import pathbuilder
 from utils import sources
 
@@ -10,7 +11,9 @@ class Feat(pathbuilder.Feat):
 	def name(self):
 		return self[0]
 
-class Build(pathbuilder.Build):
+class Build(common.StructCommon):
+    
+    STRUCTURE = pathbuilder.Build
 	
     def from_json_id(id: int):
         headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0", "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
@@ -19,18 +22,19 @@ class Build(pathbuilder.Build):
             return Build.from_json(response.text)
     
     @classmethod
-    def from_json(json_data: str):
+    def from_json(cls, json_data: str):
         build_data = json.loads(json_data)["build"]
-        return Build(
-            level=build_data["level"],
-            feats=list(map(Feat, build_data["feats"])),
-            specials=build_data["specials"],
-            proficiencies=build_data["proficiencies"]
-        )
+        return super().from_raw_dict(raw_dict=build_data)
+        # return Build(
+        #     level=build_data["level"],
+        #     feats=list(map(Feat, build_data["feats"])),
+        #     specials=build_data["specials"],
+        #     proficiencies=build_data["proficiencies"]
+        # )
     
     def get_all_feat_names(self):
         return [
-            *[feat.name for feat in self["feats"]],
+            *[feat[0] for feat in self["feats"]],
             *self["specials"]
         ]
     

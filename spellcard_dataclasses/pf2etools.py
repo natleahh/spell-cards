@@ -3,8 +3,11 @@ import itertools
 import logging
 import re
 from typing import Optional, Self
+from spellcard_dataclasses import common
 from spellcard_structs import pf2etools
 from utils import sources, static
+import pandas as pd
+
 
 LEGACY_CHANGES = [
     (r"(.*)Tripkee(.*)", "\g<1>Grippli\g<2>"),
@@ -18,17 +21,7 @@ def legacy_compat(name: str):
         return re.sub(pattern, sub, name)
     return name
 
-class PF2EAbstract(abc.ABC):
-
-	@classmethod
-	def from_raw_dict(cls, data: dict):
-		filtered_data = {
-			k: v.from_raw_dict() if "from_raw_dict" in type(v).__dict__ else v
-			for k, v 
-			in data.items() if k in cls.__annotations__
-		}
-		
-		return cls(filtered_data)
+class PF2EStruct(common.StructCommon, abc.ABC):
 		
 	@classmethod
 	def from_name(cls, name: str, source: Optional[str], data_source: pd.DataFrame): # type: ignore
@@ -48,13 +41,15 @@ class PF2EAbstract(abc.ABC):
 				).head(1)
 				source = query.index.to_list()[0][0]
 		raw_dict = query.replace(float("nan"), None).squeeze().to_dict()
-		return cls.from_raw_dict(data={"name": name, "source": raw_dict.get("source") or source, **raw_dict})
+		return cls.from_raw_dict(raw_dict={"name": name, "source": raw_dict.get("source") or source, **raw_dict})
 	
-class Action(pf2etools.Action, PF2EAbstract):
+class Action(PF2EStruct):
+    
+    STRUCTURE = pf2etools.Action
     
     @classmethod
     def from_name(cls, name: str, source: Optional[str] = None):
-        return super(constructor=cls, name=name, source=source, data_source=sources.ACTION_DATA)
+        return super().from_name(name=name, source=source, data_source=sources.ACTION_DATA)
     
     def get_source_index(self):
         try:
@@ -81,7 +76,9 @@ class Action(pf2etools.Action, PF2EAbstract):
         return [actions[0] for actions in by_name.values()]
 
 
-class Feat(pf2etools.Feat, PF2EAbstract):
+class Feat(PF2EStruct):
+    
+    STRUCTURE = pf2etools.Feat
     
     @classmethod
     def from_name(cls, name: str, source: Optional[str] = None):
