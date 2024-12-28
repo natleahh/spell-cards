@@ -1,23 +1,22 @@
 
 
-from typing import Literal, TypedDict
+from typing import Literal, Optional, TypedDict
 
 ActionSource = Literal["race", "class", "background", "item", "feat"]
 
+class ActionDefinition(TypedDict):
+    name: str
+
 class Action(TypedDict):
-    name: dict
-    limitedUse: dict
-    desctiption: str
-    snipped: str
+    definition: Optional[ActionDefinition]
+    name: Optional[str]
 
-
-class Spell(Action):
-    pass
+class ClassSpell(TypedDict):
+    spells: list[Action]
 
 ActionSummary = dict[ActionSource, Action]
 
-SpellSummary = dict[ActionSource, Spell]
-
 class Build(TypedDict):
     actions: ActionSummary
-    spells: SpellSummary
+    spells: ActionSummary
+    classSpells: list[ClassSpell]
