@@ -5,10 +5,8 @@ import json
 from pathlib import Path
 import sys
 from typing import Optional
-
-from titlecase import titlecase
-
 from spellcard_dataclasses import custom, dnd5etools, dndbeyond
+import utils
 
 
 def parse_cli_args(argv: Optional[list[str]]):
@@ -27,7 +25,7 @@ def parse_cli_args(argv: Optional[list[str]]):
     )
     data_input.add_argument(
         "--spell_names",
-        type=lambda s: titlecase(s.replace("_", " ")),
+        type=lambda s: utils.custom_titlecase(s.replace("_", " ")),
         nargs="+"
     )
     data_input.add_argument(
