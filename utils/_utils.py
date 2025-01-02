@@ -4,11 +4,15 @@ import getpass
 import json
 import os
 from pathlib import Path
+import re
 
 import numpy as np
 import pandas as pd
+from titlecase import titlecase
 
 import utils.static as static
+
+SMALL_WORDS = "|".join(map(str.capitalize, static.CUSTOM_SMALL_WORDS))
 
 def get_env_variable(variable: str, prompt=False, secret=False):
     try:
@@ -87,4 +91,11 @@ def word_list(*words: str, sep=",", join="and"):
             return " ".join([a, join, b])
         case [*ws, a, b]:
             return "{} {}".format(f"{sep} ".join(ws), word_list(a, b, join=join))
-        
+
+def custom_titlecase(sentence):
+    titlecased = titlecase(sentence)
+    word_match = re.match(f"(.*)({SMALL_WORDS})(.*)", titlecased)
+    if word_match is None:
+        return titlecased
+    front, small_word, back = word_match.groups()
+    return f"{front}{small_word.lower()}{back}"

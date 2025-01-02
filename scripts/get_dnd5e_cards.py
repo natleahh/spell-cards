@@ -1,14 +1,12 @@
 
 import argparse
+from itertools import chain
 import json
 from pathlib import Path
-import string
 import sys
 from typing import Optional
-
-from titlecase import titlecase
-
-from spellcard_dataclasses import custom, dndbeyond
+from spellcard_dataclasses import custom, dnd5etools, dndbeyond
+import utils
 
 
 def parse_cli_args(argv: Optional[list[str]]):
@@ -17,18 +15,22 @@ def parse_cli_args(argv: Optional[list[str]]):
     data_input = parser.add_mutually_exclusive_group(required=True)
 
     data_input.add_argument(
-        "--json_id",
+        "--character_json_id",
         type=int
     )
 
     data_input.add_argument(
-        "--json_path",
+        "--character_json_path",
         type=Path,
     )
     data_input.add_argument(
         "--spell_names",
-        type=lambda s: titlecase(s.replace("_", " ")),
+        type=lambda s: utils.custom_titlecase(s.replace("_", " ")),
         nargs="+"
+    )
+    data_input.add_argument(
+        "--statblock_data_path",
+        type=Path,
     )
     
     parser.add_argument(
@@ -41,11 +43,15 @@ def main(argv: Optional[list[str]] = None):
     args = parse_cli_args(argv)
     if args.spell_names:
         spells = custom.Dnd5eSpells.from_spell_names(args.spell_names)
+    elif args.statblock_data_path:
+        statblocks = dnd5etools.Monster.from_source_data(args.statblock_data_path.read_text())
+        spell_names = chain.from_iterable(map(dnd5etools.Monster.get_spell_names, statblocks))
+        spells = custom.Dnd5eSpells.from_spell_names(spell_names=spell_names)
     else:
-        if args.json_id:
-            build = dndbeyond.Build.from_json_id(args.json_id)
-        elif args.json_path:
-            build = dndbeyond.Build.from_json_data(args.json_path.read_text())
+        if args.character_json_id:
+            build = dndbeyond.Build.from_json_id(args.character_json_id)
+        elif args.character_json_path:
+            build = dndbeyond.Build.from_json_data(args.character_json_path.read_text())
         spells = custom.Dnd5eSpells.from_dndbeyond_build(build)
         
 
