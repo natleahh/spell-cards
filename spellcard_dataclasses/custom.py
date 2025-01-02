@@ -6,6 +6,8 @@ from spellcard_dataclasses import dnd5etools, dndbeyond, pathbuilder, pf2etools
 import utils.sources as sources
 
 class CardFactor(list):
+
+    CARD_DIM = (40, 30)
     
     def format_list_items(self, items: list[dict]):
         for item in items:
@@ -14,17 +16,37 @@ class CardFactor(list):
                     yield f"bullet | {item['name']}: {entry}"
                 else:
                     yield f"text | {entry}"
-                    
-    def split_content(self, content: list[str]):
-        line_count = 0
-        sublists = [[]]
-        
-        for line in content:
-            sub_line_count = len(line.split(" | ")[-1]) // 20
-            line_count += sub_line_count + 2
-            if line_count > 20:
+
+
+    def get_block_size(self, line: str):
+        tabbed_padding = 0
+        match line.split(" | "):
+            case ["rule" | "ruler"]:
+                return 1
+            case ["property", property_name, text_body]:
+                content = f"{property_name} {text_body}"
+                tabbed_padding = 2
+            case [_, text_body]:
+                content = text_body
+        line_length = 0
+        size = 1
+        for word in content.split(" "):
+            word_length = len(word) + 1
+            if line_length + word_length > self.CARD_DIM[0]:
+                size += 1
+                line_length = tabbed_padding
+            line_length += word_length
+        return size
+
+
+    def split_content(self, content: list[str], header_size: int, max_size: int):
+        line_count = header_size
+        sublists = [[]]        
+        for i, line in enumerate(content):
+            block_size = self.get_block_size(line=line) + 1
+            if block_size + line_count > max_size and i:
                 sublists[-1].append("text | cont.")
-                line_count = 0
+                line_count = header_size
                 sublists.append(["text | cont."])
             sublists[-1].append(line)
         
@@ -75,7 +97,12 @@ class Dnd5eSpells(CardFactor):
             re.sub(r"{\@\w+ ([\w\s]*\|){0,2}?([\w\s]+)(\|[A-Z0-9]{2,4})?}", r"\g<2>", entry)
             for entry in content
         ]
-        sub_lists = self.split_content(content)
+        
+        sub_lists = self.split_content(
+            content=content,
+            header_size=sum(map(self.get_block_size, traits)),
+            max_size=30
+            )
         return [[*traits, *sub_list] for sub_list in sub_lists]
         
     
@@ -206,7 +233,7 @@ class PathFinderActions(CardFactor):
             re.sub(r"{\@\w+ ([\w\s]*\|){0,2}?([\w\s]+)(\|[A-Z0-9]{2,4})?}", r"\g<2>", entry)
             for entry in content
         ]
-        sub_lists = self.split_content(content)
+        sub_lists = self.split_content(content, 45)
         return [[*traits, *sub_list] for sub_list in sub_lists]
             
 
