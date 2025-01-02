@@ -1,10 +1,44 @@
+import json
+import logging
 import re
+
 from spellcard_dataclasses import common
 from spellcard_structs import dnd5etools
 import utils
 from utils import static
 
 SOURCES = ["PHB", "TCE", "XGE"]
+    
+    
+    
+class Monster(common.StructCommon):
+    STRUCTURE = dnd5etools.Monster
+    
+    
+    def get_spell_names(self):
+        spell_names = []
+        if not self["spellcasting"]:
+            return spell_names
+        
+        for spellcasting in self["spellcasting"]:
+            for level_spells in spellcasting.get("spells").values():
+                for spell in level_spells["spells"]:
+                    try:
+                        spell_name = re.search(r"\{@spell ([\w' ]+)(\|\w+)?\}", spell).group(1)
+                    except AttributeError:
+                        logging.warning(f"Missing spell entry: {spell} found in monters: {self['name']}")
+                        continue
+                    spell_names.append(utils.custom_titlecase(spell_name))
+        return spell_names
+    
+    @classmethod
+    def from_source_data(cls, json_data: str):
+        monsters = []
+        for monster_data in json.loads(json_data).get("monster", []):
+            monsters.append(Monster.from_raw_dict(monster_data))
+        return monsters
+        
+        
     
 class Spell(common.DBItemCommon):
     STRUCTURE = dnd5etools.Spell

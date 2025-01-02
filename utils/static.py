@@ -11,3 +11,4 @@ SCHOOL_MAPPING = {
     "T": "transmutation"
  
 }
+CUSTOM_SMALL_WORDS = ["without", "into"]

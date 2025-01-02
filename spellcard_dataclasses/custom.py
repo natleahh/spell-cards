@@ -53,6 +53,10 @@ class CardFactor(list):
         return [*filter(bool, sublists)]
 
 class Dnd5eSpells(CardFactor):
+
+    @classmethod
+    def from_spell_names(cls, spell_names: list[str]):
+        return cls(map(dnd5etools.Spell.from_name, spell_names))
     
     @classmethod
     def from_dndbeyond_build(cls, build: dndbeyond.Build):
