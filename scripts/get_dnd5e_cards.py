@@ -40,6 +40,8 @@ def main(argv: Optional[list[str]] = None):
     args = parse_cli_args(argv)
     if args.spell_names:
         spells = custom.Dnd5eSpells.from_spell_names(args.spell_names)
+    elif args.stats_data_path:
+        
     else:
         if args.character_json_id:
             build = dndbeyond.Build.from_json_id(args.character_json_id)
