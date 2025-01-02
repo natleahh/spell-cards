@@ -2,7 +2,6 @@ import json
 import logging
 import re
 
-from titlecase import titlecase
 from spellcard_dataclasses import common
 from spellcard_structs import dnd5etools
 import utils
@@ -25,10 +24,12 @@ class Monster(common.StructCommon):
             for level_spells in spellcasting.get("spells").values():
                 for spell in level_spells["spells"]:
                     try:
-                        spell_name = re.search(r"\{@spell ([\w ]+)\|\w+\}", spell).group(1)
+                        spell_name = re.search(r"\{@spell ([\w' ]+)(\|\w+)?\}", spell).group(1)
                     except AttributeError:
                         logging.warning(f"Missing spell entry: {spell} found in monters: {self['name']}")
-                    spell_names.append(titlecase(spell_name))
+                        continue
+                    spell_names.append(utils.custom_titlecase(spell_name))
+        return spell_names
     
     @classmethod
     def from_source_data(cls, json_data: str):
