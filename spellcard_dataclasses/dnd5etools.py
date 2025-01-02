@@ -43,6 +43,8 @@ class Spell(common.DBItemCommon):
         match self["range"]:
             case None:
                 return None
+            case {"type": range_type}:
+                return range_type
             case {"type": "point", **details}:
                 match details["distance"]:
                     case {"type": value}:
