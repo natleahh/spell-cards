@@ -2,8 +2,11 @@
 import argparse
 import json
 from pathlib import Path
+import string
 import sys
 from typing import Optional
+
+from titlecase import titlecase
 
 from spellcard_dataclasses import custom, dndbeyond
 
@@ -24,7 +27,7 @@ def parse_cli_args(argv: Optional[list[str]]):
     )
     data_input.add_argument(
         "--spell_names",
-        type=lambda s: s.replace("_", " ").title(),
+        type=lambda s: titlecase(s.replace("_", " ")),
         nargs="+"
     )
     
