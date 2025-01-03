@@ -55,13 +55,19 @@ class CardFactor(list):
             block_size = self.get_block_size(line=line)
             if block_size + line_count > max_size:
                 *head, text = line.split(" | ")
-                overspill = int(((block_size + line_count) - max_size) * self.CARD_DIM[0]) - len("(cont.)")
-                while line[overspill] != " ":
-                    overspill -= 1
-                front, back = text[:overspill], text[overspill:]
-                sublists[-1].append(f"{' | '.join([*head, front])} (cont.)")
+                line_overspill = max_size - (block_size + line_count)
+                char_overspill = int(line_overspill * self.CARD_DIM[0]) - len("(cont.)")
+                try:
+                    while line[char_overspill] != " ":
+                        char_overspill -= 1
+                except IndexError:
+                    char_overspill = 0
+                front, back = text[:char_overspill], text[char_overspill:]
+                if front:
+                    sublists[-1].append(f"{' | '.join([*head, front])} (cont.)")
                 line_count = header_size
-                content.insert(0, f"{' | '.join([*head, '(cont.) ' + back])}")
+                if back:
+                    content.insert(0, f"{' | '.join([*head, '(cont.) ' + back])}")
                 sublists.append([])
             else:
                 sublists[-1].append(line)
@@ -121,7 +127,7 @@ class Dnd5eSpells(CardFactor):
         
         sub_lists = self.split_content(
             content=content,
-            header_size=sum(map(self.get_block_size, traits)),
+            header_size=sum(map(self.get_block_size, traits)) + 4,
             max_size=self.CARD_DIM[1]
             )
         return [[*traits, *sub_list] for sub_list in sub_lists]
