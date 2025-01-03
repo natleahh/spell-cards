@@ -7,7 +7,7 @@ import utils.sources as sources
 
 class CardFactor(list):
 
-    CARD_DIM = (40, 30)
+    CARD_DIM = (45, 20)
     
     def format_list_items(self, items: list[dict]):
         for item in items:
@@ -17,38 +17,55 @@ class CardFactor(list):
                 else:
                     yield f"text | {entry}"
 
-
     def get_block_size(self, line: str):
         tabbed_padding = 0
+        end_padding = 0
+        line_length = 0
+        content = line.split(" | ")[-1]
         match line.split(" | "):
             case ["rule" | "ruler"]:
-                return 1
+                return 1.0
             case ["property", property_name, text_body]:
                 content = f"{property_name} {text_body}"
                 tabbed_padding = 2
-            case [_, text_body]:
-                content = text_body
-        line_length = 0
-        size = 1
+            case ["text", _]:
+                end_padding = 1
+            case ["bullet", _]:
+                line_length = 4
+                tabbed_padding = 4
+            case [_, _]:
+                pass
+            case unhandled:
+                raise ValueError(f"Unhandled case {unhandled}")
+        size = 0
         for word in content.split(" "):
             word_length = len(word) + 1
             if line_length + word_length > self.CARD_DIM[0]:
                 size += 1
                 line_length = tabbed_padding
             line_length += word_length
-        return size
+        return size + end_padding + (line_length / self.CARD_DIM[0])
 
 
     def split_content(self, content: list[str], header_size: int, max_size: int):
         line_count = header_size
-        sublists = [[]]        
-        for i, line in enumerate(content):
-            block_size = self.get_block_size(line=line) + 1
-            if block_size + line_count > max_size and i:
-                sublists[-1].append("text | cont.")
+        sublists = [[]]
+        while content:
+            line = content.pop(0)
+            block_size = self.get_block_size(line=line)
+            if block_size + line_count > max_size:
+                *head, text = line.split(" | ")
+                overspill = int(((block_size + line_count) - max_size) * self.CARD_DIM[0]) - len("(cont.)")
+                while line[overspill] != " ":
+                    overspill -= 1
+                front, back = text[:overspill], text[overspill:]
+                sublists[-1].append(f"{' | '.join([*head, front])} (cont.)")
                 line_count = header_size
-                sublists.append(["text | cont."])
-            sublists[-1].append(line)
+                content.insert(0, f"{' | '.join([*head, '(cont.) ' + back])}")
+                sublists.append([])
+            else:
+                sublists[-1].append(line)
+                line_count += int(block_size)
         
         return [*filter(bool, sublists)]
 
@@ -105,7 +122,7 @@ class Dnd5eSpells(CardFactor):
         sub_lists = self.split_content(
             content=content,
             header_size=sum(map(self.get_block_size, traits)),
-            max_size=30
+            max_size=self.CARD_DIM[1]
             )
         return [[*traits, *sub_list] for sub_list in sub_lists]
         
