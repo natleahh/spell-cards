@@ -23,6 +23,8 @@ class DBItemCommon(StructCommon):
         name = cls.legacy_compatbility(name)
         try: 
             query = cls.DATA.loc[name]
+        except KeyError:
+            query = cls.DATA[cls.DATA.index.map(str.lower()) == name.lower()]
         except:
             logging.error(f"No record called {name} in database.")
             return
