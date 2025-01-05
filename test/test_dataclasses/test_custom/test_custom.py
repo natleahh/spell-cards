@@ -1,6 +1,6 @@
 import pytest
 
-from spellcard_dataclasses.custom import CardItemList
+from spellcard_dataclasses.card import CardItemList
 
    
 

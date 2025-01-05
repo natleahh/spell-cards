@@ -153,8 +153,6 @@ class Dnd5eSpells(CardItemList):
         for entry in spell["entries"]:
             if isinstance(entry, str):
                 content.append(f"text | {entry}")
-            # elif entry["type"] == "successDegree":
-            #     content.extend(starmap("property | {} | {}".format, entry["entries"].items()))
             elif entry["type"] == "list":
                 content.extend(map("bullet | {}".format, entry["items"]))
             elif entry["type"] == "entries":

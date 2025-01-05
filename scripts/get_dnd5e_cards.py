@@ -5,7 +5,7 @@ import json
 from pathlib import Path
 import sys
 from typing import Optional
-from spellcard_dataclasses import custom, dnd5etools, dndbeyond
+from spellcard_dataclasses import card, dnd5etools, dndbeyond
 import utils
 
 
@@ -47,17 +47,17 @@ def parse_cli_args(argv: Optional[list[str]]):
 def main(argv: Optional[list[str]] = None):
     args = parse_cli_args(argv)
     if args.spell_names:
-        spells = custom.Dnd5eSpells.from_spell_names(args.spell_names)
+        spells = card.Dnd5eSpells.from_spell_names(args.spell_names)
     elif args.statblock_data_path:
         statblocks = dnd5etools.Monster.from_source_data(args.statblock_data_path.read_text())
         spell_names = chain.from_iterable(map(dnd5etools.Monster.get_spell_names, statblocks))
-        spells = custom.Dnd5eSpells.from_spell_names(spell_names=spell_names)
+        spells = card.Dnd5eSpells.from_spell_names(spell_names=spell_names)
     else:
         if args.character_json_id:
             build = dndbeyond.Build.from_json_id(args.character_json_id)
         elif args.character_json_path:
             build = dndbeyond.Build.from_json_data(args.character_json_path.read_text())
-        spells = custom.Dnd5eSpells.from_dndbeyond_build(build)
+        spells = card.Dnd5eSpells.from_dndbeyond_build(build)
     
         
     spells.set_color(args.color)
