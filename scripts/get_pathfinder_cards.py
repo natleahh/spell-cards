@@ -5,7 +5,7 @@ from pathlib import Path
 import sys
 from typing import Optional
 
-from spellcard_dataclasses import custom, pathbuilder
+from spellcard_dataclasses import card, pathbuilder
 
 def parse_cli_args(argv: Optional[list[str]]):
     parser = argparse.ArgumentParser()
@@ -23,6 +23,11 @@ def parse_cli_args(argv: Optional[list[str]]):
     )
     
     parser.add_argument(
+        "--color",
+        type=str,
+    )
+    
+    parser.add_argument(
         "--outpath", "-o",
         type=str,
     )
@@ -35,7 +40,8 @@ def main(argv: Optional[list[str]] = None):
     else:
         build = pathbuilder.Build.from_json(args.json_path.read_text())
 
-    character = custom.PathFinderActions.from_pathbuilder_build(build)
+    character = card.PathFinderActions.from_pathbuilder_build(build)
+    character.set_color(args.color)
     cards = character.get_all_cards()
 
     with (open(args.outpath, "w") if args.outpath is not None else sys.stdout) as output:

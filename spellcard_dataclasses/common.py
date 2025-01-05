@@ -24,8 +24,13 @@ class DBItemCommon(StructCommon):
         try: 
             query = cls.DATA.loc[name]
         except KeyError:
-            query = cls.DATA[cls.DATA.index.map(str.lower()) == name.lower()]
-        except:
+            name_index = cls.DATA.index.get_level_values("name")
+            selector = name_index.map(str.lower) == name.lower()
+            if not selector.any():
+                logging.error(f"No record called {name} in database.")
+                return
+            query = cls.DATA[selector]
+        except KeyError:
             logging.error(f"No record called {name} in database.")
             return
         if query.size > 1:
