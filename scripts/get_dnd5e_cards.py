@@ -34,6 +34,11 @@ def parse_cli_args(argv: Optional[list[str]]):
     )
     
     parser.add_argument(
+        "--color",
+        type=str,
+    )
+    
+    parser.add_argument(
         "--outpath", "-o",
         type=str,
     )
@@ -53,8 +58,9 @@ def main(argv: Optional[list[str]] = None):
         elif args.character_json_path:
             build = dndbeyond.Build.from_json_data(args.character_json_path.read_text())
         spells = custom.Dnd5eSpells.from_dndbeyond_build(build)
+    
         
-
+    spells.set_color(args.color)
     cards = spells.get_all_cards()
 
     with (open(args.outpath, "w") if args.outpath is not None else sys.stdout) as output:
@@ -62,4 +68,4 @@ def main(argv: Optional[list[str]] = None):
             
 
 if __name__ == "__main__":
-    main()
+    main(["--spell_names", "dream"])

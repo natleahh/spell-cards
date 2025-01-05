@@ -1,14 +1,20 @@
-from itertools import starmap
+from collections import UserList
+from itertools import chain, starmap
 import re
 
 from spellcard_structs.card import RPGCard
 from spellcard_dataclasses import dnd5etools, dndbeyond, pathbuilder, pf2etools
 import utils.sources as sources
 
-class CardFactor(list):
+class CardItemList(UserList):
 
     CARD_DIM = (45, 20)
-    
+
+    def __init__(self, data, color=None):
+        super().__init__()
+        self.data = [*data]
+        self._color = color
+        
     def format_list_items(self, items: list[dict]):
         for item in items:
             for i, entry in enumerate(item['entries']):
@@ -75,7 +81,43 @@ class CardFactor(list):
         
         return [*filter(bool, sublists)]
 
-class Dnd5eSpells(CardFactor):
+    def get_cards(self, card_item: dict): 
+        icon = self.get_icon(card_item)
+        contents = self.get_text_body(card_item)
+        cards = []
+        for i, content in enumerate(contents, 1):
+            title = "{}{}".format(
+                card_item["name"],
+                f" ({i}/{len(contents)})" if len(contents) > 1 else  ""
+            )
+            card = RPGCard(
+                title=title,
+                count=1,
+                color=self.color,
+                icon=icon,
+                icon_back="",
+                contents=content,
+                tags=[]
+            )
+            
+            cards.append(card)
+        return cards
+    
+    def get_all_cards(self):
+        return [
+            card
+            for card_data in self
+            for card in self.get_cards(card_data)
+        ]
+    
+    def set_color(self, color: str):
+        self._color = color
+
+    @property
+    def color(self):
+        return self._color
+    
+class Dnd5eSpells(CardItemList):
 
     @classmethod
     def from_spell_names(cls, spell_names: list[str]):
@@ -88,6 +130,10 @@ class Dnd5eSpells(CardFactor):
     @classmethod
     def from_dndbeyond_id(cls, id: int):
         return cls.from_dndbeyond_build(dndbeyond.Build.from_json_id(id))
+    
+    @staticmethod
+    def get_icon(card_item):
+        return  "white-book-{}".format(card_item["level"])
     
     def get_text_body(self, spell: dnd5etools.Spell):        
         traits = [
@@ -133,36 +179,10 @@ class Dnd5eSpells(CardFactor):
         return [[*traits, *sub_list] for sub_list in sub_lists]
         
     
-    def get_card_from_spell(self, spell: dnd5etools.Spell): 
-        icon = "white-book-{}".format(spell["level"])
-        contents = self.get_text_body(spell)
-        cards = []
-        for i, content in enumerate(contents, 1):
-            title = "{}{}".format(
-                spell["name"],
-                f" ({i}/{len(contents)})" if len(contents) > 1 else  ""
-            )
-            card = RPGCard(
-                title=title,
-                count=1,
-                color="Chocolate",
-                icon=icon,
-                icon_back="",
-                contents=content,
-                tags=[]
-            )
-            
-            cards.append(card)
-        return cards
-    
     def get_all_cards(self):
-        return [
-            card
-            for spell in self
-            for card in self.get_card_from_spell(spell)
-        ]
+        return super().get_all_cards()
 
-class PathFinderActions(CardFactor):
+class PathFinderActions(CardItemList):
     
     @classmethod
     def from_pathbuilder_build(cls, build: pathbuilder.Build):
@@ -176,6 +196,10 @@ class PathFinderActions(CardFactor):
             pf2etools.Action.get_unique([*feat_action, *basic_actions])
         )
     
+    @classmethod
+    def from_pathbuilder_json_id(cls, json_id: int):
+        return cls.from_pathbuilder_build(pathbuilder.Build.from_json_id(json_id))
+
     def actions_from_feat_names(cls, feat_names: list[str]):
         actions = []
         for feat_name in feat_names:
@@ -208,10 +232,6 @@ class PathFinderActions(CardFactor):
             actions.append(pf2etools.Action.from_name(name=name, source=source))
         return actions
             
-
-    @classmethod
-    def from_pathbuilder_json_id(cls, json_id: int):
-        return cls.from_pathbuilder_build(pathbuilder.Build.from_json_id(json_id))
     
     @staticmethod
     def get_icon(action):
@@ -260,38 +280,14 @@ class PathFinderActions(CardFactor):
             re.sub(r"{\@\w+ ([\w\s]*\|){0,2}?([\w\s]+)(\|[A-Z0-9]{2,4})?}", r"\g<2>", entry)
             for entry in content
         ]
-        sub_lists = self.split_content(content, 45)
+        header_size = len([*chain.from_iterable(traits)]) // self.CARD_DIM[0] + 1
+        sub_lists = self.split_content(
+            content=content,
+            header_size=header_size * 3,
+            max_size=self.CARD_DIM[1],
+        )
         return [[*traits, *sub_list] for sub_list in sub_lists]
-            
-
-    def get_card_from_action(self, action: pf2etools.Action):
-        icon = self.get_icon(action)
-        contents = self.get_text_body(action)
-        cards = []
-        for i, content in enumerate(contents, 1):
-            title = "{}{}".format(
-                action["name"],
-                f" ({i}/{len(contents)})" if len(contents) > 1 else  ""
-            )
-            card = RPGCard(
-                title=title,
-                count=1,
-                color="Chocolate",
-                icon=icon,
-                icon_back="",
-                contents=content,
-                tags=action["traits"]
-            )
-            
-            cards.append(card)
-        return cards
-    
-    def get_card_from_action_name(self, action_name):
-        return self.get_card_from_action(action=pf2etools.Action.from_name(action_name))
+               
     
     def get_all_cards(self):
-        return [
-            card
-            for action in self
-            for card in self.get_card_from_action(action)
-        ]
+        return super().get_all_cards()

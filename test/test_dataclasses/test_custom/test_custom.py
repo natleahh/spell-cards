@@ -1,6 +1,6 @@
 import pytest
 
-from spellcard_dataclasses.custom import CardFactor
+from spellcard_dataclasses.custom import CardItemList
 
    
 
@@ -17,7 +17,7 @@ from spellcard_dataclasses.custom import CardFactor
 	]
 )
 def test_get_block_size_paragraphs(line, expected_size):
-    assert CardFactor().get_block_size(line=f"text | {line}") == expected_size
+    assert CardItemList().get_block_size(line=f"text | {line}") == expected_size
     
 
 @pytest.mark.parametrize(
@@ -28,4 +28,4 @@ def test_get_block_size_paragraphs(line, expected_size):
 	]
 )
 def test_get_block_size_property(line, expected_size):
-    assert CardFactor().get_block_size(line=f"property | {line}") == expected_size
+    assert CardItemList().get_block_size(line=f"property | {line}") == expected_size
