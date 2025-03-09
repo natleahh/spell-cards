@@ -1,6 +1,8 @@
 from collections import UserList
 from itertools import chain, starmap
+import itertools
 import re
+from typing import Optional
 
 from spellcard_structs.card import RPGCard
 from spellcard_dataclasses import dnd5etools, dndbeyond, pathbuilder, pf2etools
@@ -14,6 +16,7 @@ class CardItemList(UserList):
         super().__init__()
         self.data = [*data]
         self._color = color
+        self._page_layout = None
         
     def format_list_items(self, items: list[dict]):
         for item in items:
@@ -84,30 +87,63 @@ class CardItemList(UserList):
     def get_cards(self, card_item: dict): 
         icon = self.get_icon(card_item)
         contents = self.get_text_body(card_item)
+        padded = contents + ([None] * (len(contents) % 2))
+        content_pairs = [padded[i: i + 2] for i in range(0, len(padded), 2)]
         cards = []
-        for i, content in enumerate(contents, 1):
+        for i, pair in enumerate(content_pairs, 1):
             title = "{}{}".format(
                 card_item["name"],
-                f" ({i}/{len(contents)})" if len(contents) > 1 else  ""
+                f" ({i}/{len(content_pairs)})" if len(content_pairs) > 1 else  ""
             )
-            card = RPGCard(
-                title=title,
-                count=1,
-                color=self.color,
-                icon=icon,
-                icon_back="",
-                contents=content,
-                tags=[]
-            )
+            card_pair = []
             
-            cards.append(card)
+            for content in pair:
+                card = RPGCard(
+                    title=None if content is None else title,
+                    count=1,
+                    color=self.color,
+                    icon=None if content is None else icon,
+                    icon_back="",
+                    contents=content,
+                    tags=[]
+                )
+                card_pair.append(card)
+            
+            cards.append(tuple(card_pair))
         return cards
     
+    
+    @staticmethod
+    def sort_page_layout(card_pair: tuple[RPGCard, RPGCard]):
+        return (
+            card_pair[1]["title"] is None,
+            card_pair[0]["icon"],
+            card_pair[0]["title"]
+        )
+    
     def get_all_cards(self):
+        card_pairs = [*itertools.chain.from_iterable(map(self.get_cards, self))]
+        if self.page_layout is None:
+            return [*filter(lambda card: card["title"] is not None, itertools.chain(*card_pairs))]
+        sorted_pairs = sorted(card_pairs, key=self.sort_page_layout)
+        
+        max_cols, max_rows = self.page_layout
+        pages = []
+        
+        for i, (front, back) in enumerate(sorted_pairs):
+            if i % (max_cols * max_rows) == 0:
+                pages.extend([[[]], [[]]])
+            if len(pages[-1][-1]) == max_cols:
+                for j in range(1, 3):
+                    pages[-j].append([])
+            pages[-2][-1].append(front)
+            pages[-1][-1].insert(0, back)
+                
         return [
             card
-            for card_data in self
-            for card in self.get_cards(card_data)
+            for page in pages
+            for row in page
+            for card in row
         ]
     
     def set_color(self, color: str):
@@ -116,6 +152,13 @@ class CardItemList(UserList):
     @property
     def color(self):
         return self._color
+    
+    def set_page_layout(self, page_layout: tuple[int, int]):
+        self._page_layout = page_layout
+    
+    @property
+    def page_layout(self):
+        return self._page_layout
     
 class Dnd5eSpells(CardItemList):
 

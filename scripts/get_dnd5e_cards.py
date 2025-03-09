@@ -39,6 +39,12 @@ def parse_cli_args(argv: Optional[list[str]]):
     )
     
     parser.add_argument(
+        "--page_layout",
+        type=lambda s: tuple(",".split(s)),
+        default=(3, 3)
+    )
+    
+    parser.add_argument(
         "--outpath", "-o",
         type=str,
     )
@@ -61,6 +67,7 @@ def main(argv: Optional[list[str]] = None):
     
         
     spells.set_color(args.color)
+    spells.set_page_layout(args.page_layout)
     cards = spells.get_all_cards()
 
     with (open(args.outpath, "w") if args.outpath is not None else sys.stdout) as output:
@@ -68,4 +75,4 @@ def main(argv: Optional[list[str]] = None):
             
 
 if __name__ == "__main__":
-    main(["--spell_names", "dream"])
+    main()
