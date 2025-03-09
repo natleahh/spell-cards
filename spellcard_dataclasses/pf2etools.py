@@ -6,25 +6,7 @@ from spellcard_structs import pf2etools
 from utils import sources, static
 
 
-LEGACY_CHANGES = [
-    (r"(.*)Tripkee(.*)", "\g<1>Grippli\g<2>"),
-    (r"Stunning Blows", "Stunning Fist")
-]
-
-def legacy_compat(name: str):
-    for pattern, sub in LEGACY_CHANGES:
-        if re.match(pattern, name) is None:
-            continue
-        return re.sub(pattern, sub, name)
-    return name
-
-class LegacySupport:
-    
-    @staticmethod
-    def legacy_compatbility(name):
-        return legacy_compat(name)
-
-class Action(LegacySupport, common.DBItemCommon):
+class Action(common.DBItemCommon):
     
     STRUCTURE = pf2etools.Action
     SOURCES = static.SOURCES
@@ -55,7 +37,7 @@ class Action(LegacySupport, common.DBItemCommon):
         return [actions[0] for actions in by_name.values()]
 
 
-class Feat(LegacySupport, common.DBItemCommon):
+class Feat(common.DBItemCommon):
     
     STRUCTURE = pf2etools.Feat
     SOURCES = static.SOURCES

@@ -1,5 +1,6 @@
 import json
 import logging
+import re
 from typing import TypedDict, Optional
 
 import pandas as pd
@@ -12,9 +13,31 @@ class StructCommon(dict):
     @classmethod
     def from_raw_dict(cls, raw_dict):
         return cls(cls.STRUCTURE(raw_dict))
+
+POSESSIVE_FILTER = re.compile("\w+'s ")
+
+class LegacySupport:
+
+    LEGACY_CHANGES = [
+        (r"(.*)Tripkee(.*)", "\g<1>Grippli\g<2>"),
+        (r"Stunning Blows", "Stunning Fist"),
+        (r"(Hideous Laughter)", "Tasha's \g<1>"),
+        (r"Arcane Hand", "Bigby's Hand"),
+        (r"Telepathic Bond", "Rary's Telepathic Bond")
+]
     
+    @classmethod
+    def legacy_compatbility(cls, name):
+        for pattern, sub in cls.LEGACY_CHANGES:
+            if re.match(pattern, name) is None:
+                continue
+            return re.sub(pattern, sub, name)
+        return name
+
+
+
     
-class DBItemCommon(StructCommon):
+class DBItemCommon(StructCommon, LegacySupport):
     SOURCES: list
     DATA: pd.DataFrame
             
@@ -45,9 +68,6 @@ class DBItemCommon(StructCommon):
         raw_dict = query.replace(float("nan"), None).squeeze().to_dict()
         return cls.from_raw_dict(raw_dict={"name": name, "source": raw_dict.get("source") or source, **raw_dict})
 
-    @staticmethod
-    def legacy_compatbility(name: str):
-        return name
     
 class CommonBuild(StructCommon):
     
