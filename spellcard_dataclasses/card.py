@@ -2,7 +2,6 @@ from collections import UserList
 from itertools import chain, starmap
 import itertools
 import re
-from typing import Optional
 
 from spellcard_structs.card import RPGCard
 from spellcard_dataclasses import dnd5etools, dndbeyond, pathbuilder, pf2etools
@@ -14,7 +13,7 @@ class CardItemList(UserList):
 
     def __init__(self, data, color=None):
         super().__init__()
-        self.data = [*data]
+        self.data = [card_data for card_data in data if card_data is not None]
         self._color = color
         self._page_layout = None
         

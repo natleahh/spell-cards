@@ -7,7 +7,7 @@ from spellcard_structs import dnd5etools
 import utils
 from utils import static
 
-SOURCES = ["PHB", "TCE", "XGE"]
+SOURCES = ["PHB", "TCE", "XGE", "SCC"]
     
     
     
@@ -79,12 +79,13 @@ class Spell(common.DBItemCommon):
                 return None
             case {"type": "special", **__}:
                 return "special"
-            case {"type": "point", **details}:
-                match details["distance"]:
-                    case {"type": value}:
-                        return f"{value}"
-                    case _:
-                        return "{type} {amount}".format(**details["distance"])
+            case {"type": shape, "distance": details}:
+                shape = "from a point" if shape == "point" else shape
+                match details:
+                    case {"type": "touch"}:
+                        return "touch"
+                    case {"type": type, "amount": amount}:
+                        return f"{amount} {type} {shape}"
             case _:
                 raise ValueError(f"Unsupported range type: {self['range']['type']} for spell {self['name']}")
             
