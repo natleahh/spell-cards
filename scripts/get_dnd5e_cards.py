@@ -68,4 +68,4 @@ def main(argv: Optional[list[str]] = None):
             
 
 if __name__ == "__main__":
-    main()
+    main(["--spell_names", "dream"])
