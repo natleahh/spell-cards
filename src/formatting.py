@@ -2,16 +2,23 @@ from collections import UserDict
 from copy import deepcopy
 import itertools
 import json
+import re
 
 
 class CardData(UserDict):
 	"""Class to handle conversion between TTRPG Records and cards."""
 
+	@staticmethod
+	def scrub_refs(text: str):
+		"""Removes references from text."""
+		return re.sub(r"\{@.+\s(.*)\}", "\1", text)
 
 	@property
 	def body(self):
 		""":str: Body text."""
-		return [*itertools.chain(*map(self.handle_entry, self["entries"]))]
+		raw = [*itertools.chain(*map(self.handle_entry, self["entries"]))]
+		return list(map(self.scrub_refs, raw))
+
 
 	@property
 	def header(self):
@@ -23,6 +30,10 @@ class CardData(UserDict):
 		""":str: Card data name."""
 		return self["name"]
 	
+	@property
+	def card_params(self):
+		""":dict: Default card parameters."""
+		return {"Count": 1}
 
 
 
@@ -52,7 +63,7 @@ class CardData(UserDict):
 					*map(cls.handle_entry, entry["entries"])
 				]
 			case "table":
-				return ["property | See source table"]
+				return ["property | See source table | "]
 			case "inset" | "quote":
 				return []
 			case _:
@@ -85,6 +96,12 @@ class CardData(UserDict):
 				tabbed_padding = 4
 			case ["boxes", number, size]:
 				return ((int(number) * float(size))  // 15) + 1
+			case ["p2e_start_trait_section"] | ["p2e_trait", _, _]:
+				return 0
+			case ["p2e_end_trait_section"]:
+				return 2
+			case ["p2e_activity", _, _, content]:
+				tabbed_padding = 2
 			case [_, _]:
 				pass
 			case unhandled:
@@ -145,7 +162,7 @@ class CardData(UserDict):
 		"""
 		# card data
 		card_data = [
-			[self.header, *split_body]
+			[*self.header, *split_body]
 			for split_body in self.split_body(height, width)
 		]
 		
@@ -157,10 +174,12 @@ class CardData(UserDict):
     		[*itertools.starmap(" {}/{}".format, itertools.product(range(1, n + 1), [n]))]
 			if n > 1 else [""]
 		)
-  
+
+		default_params = self.card_params | card_params
+
 		return [
 			tuple(
-				{"title": self.name + card_index[i], "contents": content} | card_params if content else card_params
+				{"title": self.name + card_index[i], "contents": content} | default_params if content else  default_params
 				for content in card_pair
 			)
 			for i, card_pair in enumerate(card_data_pairs)
@@ -174,6 +193,8 @@ class CardData(UserDict):
 class CardPage(tuple[tuple[dict, ...], ...]):
 	"""Class for formatting, controlling and outputting pages of cards."""
 
+
+
 	@classmethod
 	def from_pairs(cls, card_pairs: list[tuple[dict, dict]], height: int, width: int):
 		"""Intilises formatted pages from a list of card pairs, and provided page dimentions.
@@ -185,17 +206,22 @@ class CardPage(tuple[tuple[dict, ...], ...]):
 		"""
 		page_max = height * width
 
+		pages = []
+
 		for batch in itertools.batched(card_pairs, n=page_max):
 			listed = zip(*batch)
-			front_page, back_page = map(lambda xs: xs + [{}] * (page_max - len(xs)), listed)
-			yield CardPage(cls.to_matrix(*front_page, height=height, width=width))
-			yield CardPage(cls.flip_h(cls.to_matrix(*back_page, height=height, width=width)))	
+			front_page, back_page = map(lambda xs: xs + ({},) * (page_max - len(xs)), listed)
+			front = cls(cls.to_matrix(*front_page, height=height, width=width))
+			back = cls(cls.flip_h(cls.to_matrix(*back_page, height=height, width=width)))
+			pages.extend([front, back])
+		
+		return pages
 	
 	@staticmethod
 	def to_matrix(*cards, height, width):
 		"""Returns a height by width matrixs of cards."""
 		return tuple(
-			tuple(itertools.batched(row, n=width))
+			tuple(*itertools.batched(row, n=width))
 			for row in itertools.batched(cards, n=height)
 		)	
     
