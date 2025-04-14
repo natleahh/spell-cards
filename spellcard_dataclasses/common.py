@@ -1,7 +1,7 @@
 import json
 import logging
 import re
-from typing import TypedDict, Optional
+from typing import Self, TypedDict, Optional
 
 import pandas as pd
 import requests
@@ -34,12 +34,28 @@ class LegacySupport:
             return re.sub(pattern, sub, name)
         return name
 
-
-
+    
+class CommonBuild(StructCommon):
+    
+    @classmethod
+    def _from_json_data(cls, json_data: str, data_key: str):
+        return cls.from_raw_dict(json.loads(json_data)[data_key])
+    
+    @classmethod
+    def _from_url(cls, data_key: str, url_format: str, format_params: tuple, headers: dict = None,):
+        url = url_format.format(*format_params)
+        with requests.get(url, headers=headers) as response:
+            response.raise_for_status()
+            return cls._from_json_data(json_data=response.text, data_key=data_key)
+    
     
 class DBItemCommon(StructCommon, LegacySupport):
     SOURCES: list
     DATA: pd.DataFrame
+    
+    @classmethod
+    def all_from_build(cls, build: CommonBuild) -> list[str]:
+        raise NotImplementedError()
             
     @classmethod
     def from_name(cls, name: str, source: Optional[str] = None): # type: ignore
@@ -56,7 +72,7 @@ class DBItemCommon(StructCommon, LegacySupport):
         except KeyError:
             logging.error(f"No record called {name} in database.")
             return
-        if query.size > 1:
+        if query.index.size > 1:
             try:
                 query = query.loc[source].head(1)
             except:
@@ -68,18 +84,4 @@ class DBItemCommon(StructCommon, LegacySupport):
         raw_dict = query.replace(float("nan"), None).squeeze().to_dict()
         return cls.from_raw_dict(raw_dict={"name": name, "source": raw_dict.get("source") or source, **raw_dict})
 
-    
-class CommonBuild(StructCommon):
-    
-    @classmethod
-    def _from_json_data(cls, json_data: str, data_key: str):
-        return cls.from_raw_dict(json.loads(json_data)[data_key])
-    
-    @classmethod
-    def _from_url(cls, data_key: str, url_format: str, format_params: tuple, headers: dict = None,):
-        url = url_format.format(*format_params)
-        with requests.get(url, headers=headers) as response:
-            response.raise_for_status()
-            return cls._from_json_data(json_data=response.text, data_key=data_key)
-    
     

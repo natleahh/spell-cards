@@ -41,6 +41,8 @@ class CardItemList(UserList):
             case ["bullet", _]:
                 line_length = 4
                 tabbed_padding = 4
+            case ["boxes", number, size]:
+                return ((int(number) * float(size))  // 15) + 1
             case [_, _]:
                 pass
             case unhandled:
@@ -85,7 +87,7 @@ class CardItemList(UserList):
 
     def get_cards(self, card_item: dict): 
         icon = self.get_icon(card_item)
-        contents = self.get_text_body(card_item)
+        contents = self.get_card_text(card_item)
         padded = contents + ([None] * (len(contents) % 2))
         content_pairs = [padded[i: i + 2] for i in range(0, len(padded), 2)]
         cards = []
@@ -159,15 +161,18 @@ class CardItemList(UserList):
     def page_layout(self):
         return self._page_layout
     
-class Dnd5eSpells(CardItemList):
-
-    @classmethod
-    def from_spell_names(cls, spell_names: list[str]):
-        return cls(map(dnd5etools.Spell.from_name, spell_names))
+class Dnd5eCardItem(CardItemList):
+    
+    OBJECT_CLASS = dnd5etools.common.DBItemCommon
     
     @classmethod
+    def from_name_list(cls, name_list: list[str]):
+        return cls(map(cls.OBJECT_CLASS.from_name, name_list))
+
+    @classmethod
     def from_dndbeyond_build(cls, build: dndbeyond.Build):
-        return cls(map(dnd5etools.Spell.from_name, build.all_spell_names))
+        return cls(item for item in cls.OBJECT_CLASS.all_from_build(build=build) if item is not None)
+    
     
     @classmethod
     def from_dndbeyond_id(cls, id: int):
@@ -177,7 +182,32 @@ class Dnd5eSpells(CardItemList):
     def get_icon(card_item):
         return  "white-book-{}".format(card_item["level"])
     
-    def get_text_body(self, spell: dnd5etools.Spell):        
+    def get_header_text(self, dnd_object):
+        raise NotImplementedError()
+    
+    def get_body_text(self, dnd_object):
+        raise NotImplementedError()
+    
+    def get_card_text(self, dnd_object: dnd5etools.Spell):        
+        traits = self.get_header_text(dnd_object)
+        content = self.get_body_text(dnd_object)
+        sub_lists = self.split_content(
+            content=content,
+            header_size=sum(map(self.get_block_size, traits)) + 4,
+            max_size=self.CARD_DIM[1]
+            )
+        return [[*traits, *sub_list] for sub_list in sub_lists]
+        
+    
+    def get_all_cards(self):
+        return super().get_all_cards()
+    
+    
+class Dnd5eSpells(Dnd5eCardItem):    
+    
+    OBJECT_CLASS = dnd5etools.Spell
+
+    def get_header_text(self, spell: dnd5etools.Spell):
         traits = [
             "subtitle | {} {}".format(spell.get_spell_level().capitalize(), spell.get_school().capitalize()),
             "rule"
@@ -189,9 +219,10 @@ class Dnd5eSpells(CardItemList):
             traits.append(f"property | {property} | {details}")
             
         traits.append("rule")
-        
+        return traits
+    
+    def get_body_text(self, spell: dnd5etools.Spell):
         content = []
-        
         for entry in spell["entries"]:
             if isinstance(entry, str):
                 content.append(f"text | {entry}")
@@ -210,17 +241,48 @@ class Dnd5eSpells(CardItemList):
             re.sub(r"{\@\w+ ([\w\s]*\|){0,2}?([\w\s]+)(\|[A-Z0-9]{2,4})?}", r"\g<2>", entry)
             for entry in content
         ]
-        
-        sub_lists = self.split_content(
-            content=content,
-            header_size=sum(map(self.get_block_size, traits)) + 4,
-            max_size=self.CARD_DIM[1]
-            )
-        return [[*traits, *sub_list] for sub_list in sub_lists]
-        
+        return content
     
-    def get_all_cards(self):
-        return super().get_all_cards()
+class Dnd5eMagicItems(Dnd5eCardItem):
+    
+    OBJECT_CLASS = dnd5etools.MagicItem
+    
+    @staticmethod
+    def get_icon(card_item):
+        return None
+        
+    def get_body_text(self, magic_item: dnd5etools.MagicItem):
+        data = []
+        
+        for entry in magic_item["entries"]:
+            if isinstance(entry, str):
+                data.append(f"text | {entry}")
+            elif entry["type"] == "table":
+                data.append("property | see source table for details | ")
+            else:
+                raise 
+        data.append("rule")
+        if (max_charges := magic_item.get("charges")) is None:
+            pass
+        elif max_charges <= 20:
+            data.append(f"boxes | {max_charges} | 1.5")
+        else:
+            data.append("property | Current Charges: |")
+        
+        return data
+    
+    def get_header_text(self, magic_item: dnd5etools.MagicItem):
+        traits = [
+            f"subtitle | {magic_item.subtitle}",
+            "rule"
+        ]
+        
+        for property, value in magic_item.attributes.items():
+            if value is None:
+                continue
+            traits.append(f"property | {property} | {value}")
+        traits.append("rule")
+        return traits
 
 class PathFinderActions(CardItemList):
     
@@ -290,7 +352,7 @@ class PathFinderActions(CardItemList):
                 raise ValueError(f"unhadled case: {unhandled} icon for {action['name']}")
     
     
-    def get_text_body(self, action: pf2etools.Action):        
+    def get_card_text(self, action: pf2etools.Action):        
         traits = []
         content = []
         
@@ -313,7 +375,7 @@ class PathFinderActions(CardItemList):
             elif entry["type"] == "list":
                 content.extend(self.format_list_items(entry["items"]))
             elif entry["type"] == "ability":
-                return self.get_text_body(pf2etools.Action.from_raw_dict(entry))
+                return self.get_card_text(pf2etools.Action.from_raw_dict(entry))
             else:
                 raise ValueError(f"{action['name']} has unsupported entry")
         content = [

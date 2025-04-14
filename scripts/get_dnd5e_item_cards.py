@@ -24,13 +24,9 @@ def parse_cli_args(argv: Optional[list[str]]):
         type=Path,
     )
     data_input.add_argument(
-        "--spell_names",
+        "--item_names",
         type=lambda s: utils.custom_titlecase(s.replace("_", " ")),
         nargs="+"
-    )
-    data_input.add_argument(
-        "--statblock_data_path",
-        type=Path,
     )
     
     parser.add_argument(
@@ -52,23 +48,19 @@ def parse_cli_args(argv: Optional[list[str]]):
 
 def main(argv: Optional[list[str]] = None):
     args = parse_cli_args(argv)
-    if args.spell_names:
-        spells = card.Dnd5eSpells.from_name_list(args.spell_names)
-    elif args.statblock_data_path:
-        statblocks = dnd5etools.Monster.from_source_data(args.statblock_data_path.read_text())
-        spell_names = chain.from_iterable(map(dnd5etools.Monster.get_spell_names, statblocks))
-        spells = card.Dnd5eSpells.from_name_list(spell_names=spell_names)
+    if args.item_names:
+        magic_items = card.Dnd5eMagicItems.from_name_list(args.item_names)
     else:
         if args.character_json_id:
             build = dndbeyond.Build.from_json_id(args.character_json_id)
         elif args.character_json_path:
             build = dndbeyond.Build.from_json_data(args.character_json_path.read_text())
-        spells = card.Dnd5eSpells.from_dndbeyond_build(build)
+        magic_items = card.Dnd5eMagicItems.from_dndbeyond_build(build)
     
         
-    spells.set_color(args.color)
-    spells.set_page_layout(args.page_layout)
-    cards = spells.get_all_cards()
+    magic_items.set_color(args.color)
+    magic_items.set_page_layout(args.page_layout)
+    cards = magic_items.get_all_cards()
 
     with (open(args.outpath, "w") if args.outpath is not None else sys.stdout) as output:
         json.dump(cards, output, indent=4)

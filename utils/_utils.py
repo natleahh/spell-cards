@@ -83,6 +83,13 @@ def load_dnd_5e_spells(sources: list[str]):
         spell_data.extend(source_spells["spell"])
     return prepare_df(pd.DataFrame(spell_data))
 
+def load_dnd5e_items_data(file_name: str):
+    item_data = json.loads(
+        (get_data_path("DND_DATA_PATH") / file_name).read_text()
+    )
+    return prepare_df(pd.DataFrame(item_data.get("item") or item_data.get("baseitem")))
+
+
 def word_list(*words: str, sep=",", join="and"):
     match words:
         case [w]:

@@ -27,6 +27,14 @@ class Build(common.CommonBuild):
         return [*actions]
     
     @property
+    def all_magic_items(self):
+        return [
+            item["definition"]["name"]
+            for item in self["inventory"]
+            if item["definition"]["magic"]
+        ]
+    
+    @property
     def all_spell_names(self):
         return [*map(self.get_name, self.all_spells)]
     

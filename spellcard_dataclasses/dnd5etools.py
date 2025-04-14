@@ -1,8 +1,11 @@
+from functools import cache, cached_property
+import itertools
 import json
 import logging
 import re
+from typing import Self
 
-from spellcard_dataclasses import common
+from spellcard_dataclasses import common, dndbeyond
 from spellcard_structs import dnd5etools
 import utils
 from utils import static
@@ -44,6 +47,22 @@ class Spell(common.DBItemCommon):
     STRUCTURE = dnd5etools.Spell
     SOURCES = SOURCES
     DATA = utils.load_dnd_5e_spells(SOURCES)
+    
+    
+    @classmethod
+    def all_from_build(cls, build: dndbeyond.Build) -> list[Self]:
+        actions = itertools.chain(
+            itertools.chain.from_iterable(classSpell.get("spells") for classSpell in self["classSpells"]),
+            *filter(bool, build["spells"].values())
+        )
+        return [*map(cls.from_name, actions)]    
+        
+    def all_from(self):
+        actions = itertools.chain(
+            itertools.chain.from_iterable(classSpell.get("spells") for classSpell in self["classSpells"]),
+            *filter(bool, self["spells"].values())
+        )
+        return [*actions]
     
     def get_school(self):
         try:
@@ -136,3 +155,52 @@ class Spell(common.DBItemCommon):
             "Components": self.get_components(),
             "Duration": self.get_duration()
         }
+
+
+class BaseItem(common.DBItemCommon):
+    STRUCTURE = dnd5etools.MagicItem 
+    DATA = utils.load_dnd5e_items_data("items-base.json")
+    
+    
+class MagicItem(common.DBItemCommon):
+    STRUCTURE = dnd5etools.MagicItem 
+    DATA = utils.load_dnd5e_items_data("items.json")
+    ATTRIBUTES = ["rarity", "tier", "charges"]
+    
+    @classmethod
+    def all_from_build(cls, build: dndbeyond.Build):
+        return [
+            cls.from_name(item["definition"]["name"])
+            for item in build["inventory"]
+            if item["definition"]["magic"]
+        ]
+
+    @cached_property
+    def attunement(self):
+        match self.get("reqAttune"):
+            case True:
+                return "requires attunement"
+            case False | None:
+                return None
+            case _:
+                return f"requires attunement {self['reqAttune']}"
+    
+    
+    @cached_property
+    def subtitle(self):
+        requirement = f"({self.attunement})" if self.attunement else ""
+        base_time = "wonderous item" if self.base_item is None else self.base_item["name"]
+        return f"{base_time.title()} {requirement.title()}"
+    
+    @cached_property
+    def base_item(self):
+        return None if self.get("baseItem") is None else BaseItem.from_name(self.get("baseItem"))
+    
+    @cached_property
+    def attributes(self):
+        return {
+            attribute.capitalize(): f"{self.get(attribute)}".capitalize()
+            for attribute in self.ATTRIBUTES
+            if self.get(attribute)
+        }
+    
