@@ -88,7 +88,3 @@ def main(argv: None | list[str] = None):
     args = parent_parser.parse_args(argv)
     kwargs = dict(kw for kw in args._get_kwargs() if kw[0] not in ["func"])
     args.func(**kwargs)
-
-main(
-    "pf2espells --card_params color=red --page_layout 2,2 --json_id 350090".split(" ")
-)
