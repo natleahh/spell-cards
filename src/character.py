@@ -7,7 +7,7 @@ import requests
 
 
 
-class Build(UserDict):
+class BaseBuild(UserDict):
     """Class for ingesting JSON character data."""
 
     @classmethod

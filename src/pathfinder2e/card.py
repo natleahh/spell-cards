@@ -1,18 +1,14 @@
+""""""
 
 from itertools import starmap
 import itertools
-import json
-import logging 
-from pathlib import Path
+import logging
 import re
-from character import Build
-from formatting import CardData, CardPage
-from records import PF2eToolsData, TTRPGRecords
-import utils
+from formatting import CardData
 
 logger = logging.getLogger(__name__)
 
-class PFCardData(CardData):
+class Card(CardData):
 	"""Class to handle conversion between PF2e TTRPG Records and cards."""
 
 
@@ -65,7 +61,7 @@ class PFCardData(CardData):
 	def get_sub_paragraph_details(entry, keys):
 		"""Returns a paragraph for subparagraph."""
 		return " ".join(
-			f"<b>{PFCardData.camel_to_words(key)}:</b> {entry[key]}"
+			f"<b>{Card.camel_to_words(key)}:</b> {entry[key]}"
 			for key  in keys
 		)
 	
@@ -108,7 +104,7 @@ class PFCardData(CardData):
 		]
 
 
-class PFSpellCardData(PFCardData):
+class SpellCard(Card):
 	"""Class to handle conversion between PF2e Spell TTRPG Records and cards."""
 
 
@@ -251,125 +247,3 @@ class PFSpellCardData(PFCardData):
 		""":list[str]: Text body."""
 		return super().body + list(map(self.scrub_refs, self.footer))
 
-
-class Pathbuilder(Build):
-	"""Pathbuild character build."""
-
-	@classmethod
-	def from_json_id(cls, id: int):
-		"""Creates a pathbuilder buils from a JSON id."""
-		headers = {"User-Agent": "Mozilla/5.0 (Windows NT 10.0; Win64; x64; rv:133.0) Gecko/20100101 Firefox/133.0", "accept": "text/html,application/xhtml+xml,application/xml;q=0.9,*/*;q=0.8"}
-		return cls._from_url(
-			url_format="https://pathbuilder2e.com/json.php?id={:06d}",
-			format_params=(id,),
-			headers=headers,
-			data_path="$.build",
-		)
-	
-		
-	@classmethod
-	def from_json(cls, json_data: str):
-		"""Creates a pathbuilder buils from JSON string data."""
-		return cls._from_json_data(
-			json_data=json_data,
-			data_path="$.build",
-		)
-	
-	def meets_requirements(self, ttrpg_record: bool) -> bool:
-		"""For provided Basic Action, bool for whether self meets the Actions proficieny requirements."""
-		if (action_info := ttrpg_record.get("actionType")) is None:
-			return False
-		if not action_info["basic"]:
-			return False
-		
-		skill_reqs = itertools.chain(
-			itertools.product([level], skills)
-			for level, skills in action_info.get("skill", {}).items()
-		)
-	
-		for level, skill in skill_reqs:
-			if utils.static.PROFICIENCY_LEVELS[level] <= self["proficiency"][skill]:
-				return True
-		
-		return False
-		
-
-	@property
-	def focus(self):
-		""":list[str]: List of Focus spell names."""
-		return [
-			focus
-			for attrfocus in self["focus"].values()
-			for focus_details in attrfocus.values()
-			for focus in itertools.chain(
-				focus_details["focusCantrips"], 
-				focus_details["focusSpells"]
-			)
-		]
-	
-	@property
-	def feats(self):
-		""":list[str]: List of Feat names."""
-		return [feat_name for feat_name, *_ in self["feats"]]
-
-	@property
-	def spells(self):
-		""":list[str]: List of Spell names."""
-		return [
-			spell
-			for spell_caster in self.get("spellCasters", [])
-			for spell_level in spell_caster["spells"]
-			for spell in spell_level["list"]
-		]
-	
-def get_spell_cards(
-		json_path: Path | None, 
-		json_id: int | None, 
-		names: list[str] | None, 
-		card_params: dict,
-		page_layout: tuple[int, int], 
-		card_layout: tuple[int, int]
-	):
-	"""Prints RPGCards to the command line.
-
-	Args:
-		json_path (Path | None): Path to a character JSON File.
-		json_id (int | None): _Pathbuilder Character JSON ID.
-		names (list[str] | None): _List of Spell Names.
-		card_params (dict): Card Parameter Dictionary.
-		page_layout (tuple[int, int]): Page layout dimentions.
-		card_layout (tuple[int, int]): _Card Layout dimentions.
-	"""
-
-	## Extract Names
-	data_source = PF2eToolsData(utils.get_env_variable("PATHFINDER_DATA_PATH"))
-	records = TTRPGRecords.combine([data_source.spells, data_source.actions])
-	if names:
-		spell_names = names
-	else:
-		if json_id:
-			build = Pathbuilder.from_json_id(json_id)
-		elif json_path:
-			build = Pathbuilder.from_json(json_path.read_text())
-		else:
-			raise ValueError("One of names, json_path or json_id must be provided.")
-		spell_names = [*build.spells, *build.focus]
-	
-
-	## Query Data
-	card_pairs = []
-	c_h, c_w = card_layout
-	for name in spell_names:
-		try:
-			spell = PFSpellCardData(records.query_record(name, ["PC1", "PC2"]))
-		except (KeyError, IndexError):
-			logger.warning(f"Unable to find TTRPG Record: {name} in PC1 or PC2.")
-		card_pairs.extend(spell.get_card_pairs(height=c_h, width=c_w, **card_params))
-
-	## Page formatting
-	p_h, p_w = page_layout
-	rpg_card_data = []
-	for page in CardPage.from_pairs(card_pairs=card_pairs, height=p_h, width=p_w):
-		rpg_card_data.extend(page.export())
-
-	print(json.dumps(rpg_card_data, indent=4))

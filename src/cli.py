@@ -3,7 +3,7 @@ import argparse
 from pathlib import Path
 from typing import Callable
 
-import pf2etools
+import pathfinder2e
 
 
 class TTRPGParentParser(argparse.ArgumentParser):
@@ -83,7 +83,7 @@ def main(argv: None | list[str] = None):
     parent_parser.get_subparser(
         name="pf2espells",
         description="Creates Pathfinder 2e Spell cards from provided params.",
-        func=pf2etools.get_spell_cards
+        func=pathfinder2e.get_spell_cards
     )
     args = parent_parser.parse_args(argv)
     kwargs = dict(kw for kw in args._get_kwargs() if kw[0] not in ["func"])
