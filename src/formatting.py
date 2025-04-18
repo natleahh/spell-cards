@@ -11,7 +11,7 @@ class CardData(UserDict):
 	@staticmethod
 	def scrub_refs(text: str):
 		"""Removes references from text."""
-		return re.sub(r"\{@.+\s(.*)\}", "\1", text)
+		return re.sub(r"\{@\w+ ([^}]+)\}", r"\1", text)		
 
 	@property
 	def body(self):
@@ -29,11 +29,16 @@ class CardData(UserDict):
 	def name(self):
 		""":str: Card data name."""
 		return self["name"]
+
+	@property
+	def icon(self):
+		""":str | None: Card Icon."""
+		return None
 	
 	@property
 	def card_params(self):
 		""":dict: Default card parameters."""
-		return {"Count": 1}
+		return {"count": 1, "icon": self.icon}
 
 
 
@@ -84,7 +89,7 @@ class CardData(UserDict):
 		end_padding = 0
 		line_length = 0
 		match line.split(" | "):
-			case ["rule" | "ruler"]:
+			case ["rule" | "ruler" | "p2e_ruler"]:
 				return 1.0
 			case ["property", property_name, text_body]:
 				content = f"{property_name} {text_body}"
@@ -192,8 +197,6 @@ class CardData(UserDict):
 
 class CardPage(tuple[tuple[dict, ...], ...]):
 	"""Class for formatting, controlling and outputting pages of cards."""
-
-
 
 	@classmethod
 	def from_pairs(cls, card_pairs: list[tuple[dict, dict]], height: int, width: int):
