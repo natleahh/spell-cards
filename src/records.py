@@ -24,7 +24,7 @@ class TTRPGRecords(pd.DataFrame):
             records (list[dict]): List or TTRPG Records
             index (list[str]): List of columns to index data by.
         """
-        super().__init__(records)
+        super().__init__(records, dtype="object")
         self.set_index(index, inplace=True)
 
     
