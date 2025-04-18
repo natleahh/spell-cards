@@ -64,11 +64,11 @@ class CardData(UserDict):
 				]
 			case "entries":
 				return [
-					f"property | {entry['name']}",
+					f"text | <b>{entry['name']}</b>",
 					*map(cls.handle_entry, entry["entries"])
 				]
 			case "table":
-				return ["property | See source table | "]
+				return ["text | <b> See source table </b> | "]
 			case "inset" | "quote":
 				return []
 			case _:
