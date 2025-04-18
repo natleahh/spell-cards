@@ -24,7 +24,7 @@ class TTRPGRecords(pd.DataFrame):
             records (list[dict]): List or TTRPG Records
             index (list[str]): List of columns to index data by.
         """
-        super().__init__(records)
+        super().__init__(records, dtype="object")
         self.set_index(index, inplace=True)
 
     
@@ -56,11 +56,11 @@ class TTRPGRecords(pd.DataFrame):
             ValueError: If non-JSON file path is provided.
         """
         if not path.exists():
-            raise FileNotFoundError()
+            raise FileNotFoundError(f"No data source found at {path.as_posix()}")
                 
         if not path.is_dir():
             if path.suffix != ".json":
-                raise ValueError()
+                raise ValueError(f"Path {path.as_posix()} is not a .json of directory.")
             return [path]
         elif (path / "index.json").exists():
             index_data = json.loads((path / "index.json").read_text())
@@ -118,12 +118,29 @@ class TTRPGRecords(pd.DataFrame):
         by_source = functools.partial(self.naiive_by_sources, sources=sources or [])
         query = raw_query.sort_values(by="source", key=lambda col: col.map(by_source)).reset_index()
         return query.iloc[0].dropna().to_dict()
-
-
-        
-
-            
     
+    @classmethod
+    def _combine(cls, a: Self, b: Self) -> Self:
+        """Combines two TRRPG records into one."""
+        if a.index.names != b.index.names:
+            raise ValueError("Indexes of provided TTRPGRecords do not match.")
+        records = [
+            *a.reset_index().to_dict("records"),
+            *b.reset_index().to_dict("records")
+        ]
+        return cls(records, index=a.index.names)
+    
+    @classmethod
+    def combine(cls, ttrpg_records: list[Self]):
+        """Combines a list of TTRPGRecords into a single record.
+
+        Args:
+            ttrpg_records (list[Self]): List of TTRPG Records
+        """
+        return functools.reduce(cls._combine, ttrpg_records)
+
+
+
     def _get_data_summary(self) -> dict:
         """Retrieve a summary of all entries within this Record source, sorted by type."""
         entries = itertools.chain(*itertools.chain(*map(self._extract_entries, self["entries"])))
