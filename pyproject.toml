@@ -4,6 +4,7 @@ version = "0.1.0"
 description = "Utilities for making spell cards and action cards"
 authors = ["Aminata Tengbe"]
 readme = "README.md"
+packages = [{include = "*", from="src"}]
 
 [tool.poetry.dependencies]
 python = "^3.11"
@@ -14,6 +15,9 @@ titlecase = "^2.4.1"
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"
+
+[tool.poetry.scripts]
+rpg-cards = "cli:main"
 
 [build-system]
 requires = ["poetry-core"]
