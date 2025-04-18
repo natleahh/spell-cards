@@ -121,7 +121,7 @@ class TTRPGRecords(pd.DataFrame):
     
     @classmethod
     def _combine(cls, a: Self, b: Self) -> Self:
-        """"""
+        """Combines two TRRPG records into one."""
         if a.index.names != b.index.names:
             raise ValueError("Indexes of provided TTRPGRecords do not match.")
         records = [
@@ -132,6 +132,11 @@ class TTRPGRecords(pd.DataFrame):
     
     @classmethod
     def combine(cls, ttrpg_records: list[Self]):
+        """Combines a list of TTRPGRecords into a single record.
+
+        Args:
+            ttrpg_records (list[Self]): List of TTRPG Records
+        """
         return functools.reduce(cls._combine, ttrpg_records)
 
 
