@@ -3,6 +3,7 @@ from copy import deepcopy
 import itertools
 import json
 import re
+from typing import Self
 
 
 class CardData(UserDict):
@@ -199,7 +200,7 @@ class CardPage(tuple[tuple[dict, ...], ...]):
 	"""Class for formatting, controlling and outputting pages of cards."""
 
 	@classmethod
-	def from_pairs(cls, card_pairs: list[tuple[dict, dict]], height: int, width: int):
+	def from_pairs(cls, card_pairs: list[tuple[dict, dict]], height: int, width: int) -> list[Self]:
 		"""Intilises formatted pages from a list of card pairs, and provided page dimentions.
 
 		Args:
@@ -209,7 +210,7 @@ class CardPage(tuple[tuple[dict, ...], ...]):
 		"""
 		page_max = height * width
 
-		pages = []
+		pages: list[Self] = []
 
 		for batch in itertools.batched(card_pairs, n=page_max):
 			listed = zip(*batch)
