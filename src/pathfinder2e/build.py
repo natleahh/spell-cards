@@ -35,16 +35,18 @@ class Pathbuilder(BaseBuild):
 		"""For provided Basic Action, bool for whether self meets the Actions proficieny requirements."""
 		if (action_info := ttrpg_record.get("actionType")) is None:
 			return False
-		if not action_info["basic"]:
+		if not action_info.get("basic", False):
 			return False
 		
-		skill_reqs = itertools.chain(
+		skill_reqs = itertools.chain.from_iterable(
 			itertools.product([level], skills)
 			for level, skills in action_info.get("skill", {}).items()
 		)
+        
 	
 		for level, skill in skill_reqs:
-			if utils.static.PROFICIENCY_LEVELS[level] <= self["proficiency"][skill]:
+			required_level = utils.static.PROFICIENCY_LEVELS.index(level) * 2
+			if  required_level <= self["proficiencies"].get(skill, 0) and required_level >= 2:
 				return True
 		
 		return False

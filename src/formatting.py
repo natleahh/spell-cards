@@ -12,7 +12,7 @@ class CardData(UserDict):
 	@staticmethod
 	def scrub_refs(text: str):
 		"""Removes references from text."""
-		return re.sub(r"\{@\w+ ([^}]+)\}", r"\1", text)		
+		return re.sub(r"\{@\w+ ([^}|]+)(\|[^}]*?)*\}", r"\1", text)		
 
 	@property
 	def body(self):
@@ -39,7 +39,12 @@ class CardData(UserDict):
 	@property
 	def card_params(self):
 		""":dict: Default card parameters."""
-		return {"count": 1, "icon": self.icon}
+		return {"count": 1, "icon": self.icon, "tags": self.tags}
+
+	@property
+	def tags(self):
+		""":list[str]: Card Tags."""
+		return []
 
 
 
@@ -168,7 +173,7 @@ class CardData(UserDict):
 		"""
 		# card data
 		card_data = [
-			[*self.header, *split_body]
+			list(map(self.scrub_refs, [*self.header, *split_body]))
 			for split_body in self.split_body(height, width)
 		]
 		

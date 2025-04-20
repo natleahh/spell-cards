@@ -141,7 +141,7 @@ class TTRPGRecords(pd.DataFrame):
 
 
 
-    def _get_data_summary(self) -> dict:
+    def _get_entry_summary(self) -> dict:
         """Retrieve a summary of all entries within this Record source, sorted by type."""
         entries = itertools.chain(*itertools.chain(*map(self._extract_entries, self["entries"])))
         by_entry_type = lambda e: "txt" if isinstance(e, str) else e["type"]
@@ -159,6 +159,7 @@ class TTRPGRecords(pd.DataFrame):
             for sub_entry in entry["entries"]:
                 entries.extend(TTRPGRecords._extract_entries(sub_entry))
         return entries
+
 
 
 
@@ -215,7 +216,7 @@ class PF2eToolsData(TTRPGData):
     @cached_property
     def feats(self):
         """:TTRPGRecords: Pathfinder 2e Feat Data."""
-        return self._fetch_records("data/feats/" "$.feat")
+        return self._fetch_records("data/feats/", "$.feat")
 
 
     @cached_property

@@ -46,6 +46,10 @@ class Card(CardData):
 					[f"property | {item['name']}", *map(cls.handle_entry, item["entries"])]
 					for item in [entry["items"]]
 				]
+			case "pf2-brown-box":
+				return []
+			case heading if re.match(r"pf2-h[0-9]+", heading):
+				return []
 		
 		cls._raise_entry(entry)
 	
@@ -102,6 +106,50 @@ class Card(CardData):
 			f"property | {e['range']} | {e['entry']}"
 			for e in entry['entries']
 		]
+	
+	@staticmethod
+	def get_activity_icon(activity):
+		match activity:
+			case {"unit": "free", **__}:
+				return "p2e-free-action"
+			case {"unit": "action", "number": n, **__}:
+				match n:
+					case 1: 
+						return "p2e-1-action"
+					case n:
+						return f"p2e-{n}-actions"
+			case {"unit": "reaction", **__}:
+				return "p2e-reaction"
+			case {"unit": "minute" | "hour" | "round", **__}:
+				return None
+			case None :
+				return None
+			case _:
+				raise ValueError(f"Unhandled actvity {activity}.")
+	
+	@property
+	def tags(self):
+		return self.get("traits", [])
+	
+	@property
+	def traits(self):
+		""""""
+		return [
+			"p2e_start_trait_section",
+			*map("p2e_trait | common | {}".format, map(str.capitalize, self["traits"])),
+			"p2e_end_trait_section",
+			"p2e_ruler",
+		] if "traits" in self else []
+
+	@property
+	def body(self):
+		""":list[str]: Text body."""
+		return super().body + list(map(self.scrub_refs, self.footer))
+	
+	@property
+	def footer(self):
+		""""""
+		return []
 
 
 class SpellCard(Card):
@@ -109,21 +157,16 @@ class SpellCard(Card):
 
 
 	@property
+	def tags(self):
+		return super().tags + ["spell"]
+
+	@property
 	def icon(self):
 		""":str: Space separated list of icon names."""
-		match self["cast"]:
-			case {"unit": "action", "number": n}:
-				match n:
-					case 0:
-						icons = ["p2e-free-action"]
-					case 1: 
-						icons = [f"p2e-1-action"]
-					case n:
-						icons = [f"p2e-{n}-actions"]
-			case {"unit": "reaction", **__}:
-				icons = ["p2e-reaction"]
-			case _:
-				icons = []
+		if (activity := self.get_activity_icon(self["cast"])) is None:
+			icons = []
+		else:
+			icons = [activity]
 		return " ".join([f"white-book-{self['level']}", *icons])
 		
 	
@@ -131,10 +174,7 @@ class SpellCard(Card):
 	def header(self):
 		""":list[str]: header text."""
 		return [
-			"p2e_start_trait_section",
-			*map("p2e_trait | common | {}".format, map(str.capitalize, self["traits"])),
-			"p2e_end_trait_section",
-			"p2e_ruler",
+			*self.traits,
 			*starmap("property | {} | {}".format, self.spell_properties),
 			"p2e_ruler",
 		]
@@ -214,6 +254,8 @@ class SpellCard(Card):
 				return "Will"
 			case "R":
 				return "Reflex"
+			case "AC":
+				return "AC"
 			case _:
 				raise ValueError(f"Unsupported Saving Throw Type: {short}")
 
@@ -242,8 +284,85 @@ class SpellCard(Card):
 			*map(self.scrub_refs, self.heightened)
 		]
 
-	@property
-	def body(self):
-		""":list[str]: Text body."""
-		return super().body + list(map(self.scrub_refs, self.footer))
 
+class ActionCard(Card):
+
+	@property
+	def icon(self):
+		return self.get_activity_icon(self.get("activity"))
+		
+	
+	@property
+	def header(self):
+		return [
+			*self.traits,
+			*starmap("property | {} | {}".format, self.action_properties),
+			*(["p2e_ruler"] if self.action_properties else [])
+		]
+	
+	@property
+	def footer(self):
+		return [
+			"p2e_ruler",
+			*self.special
+		] if self.special else []
+	
+	@property
+	def action_properties(self):
+		raw =  [
+			("Level", self.get("level")),
+			("Cost", self.get("cost")),
+			("Actvity", self.activity),
+			("Frequency", self.frequency),
+			("Requirements", self.get("requirements"))
+		]
+		return [(k, v) for k, v in raw if v is not None]
+
+	
+	@property
+	def activity(self):
+		match self.get("activity", {}).get("unit"):
+			case "reaction":
+				return f"1 reaction ({self['trigger']})"
+			case "action":
+				match self["activity"]["number"]:
+					case 1:
+						return "1 action"
+					case n:
+						return f"{n} actions"
+			case "free":
+				return "free action"
+
+	@property
+	def frequency(self):
+		match self.get("frequency"):
+			case {"interval": i, "unit": u, "number": n}:
+				unit = f"{i} {u}s"
+			case {"unit": unit, "number": n}:
+				pass
+			case None:
+				return
+			case _:
+				raise 
+		return f"{n} times per {unit}"
+	
+	@property
+	def special(self):
+		if "special" not in self:
+			return []
+		text = " ".join(self["special"])
+		return [
+			f"property | Special | {text}"
+		]
+	
+class BasicActionCard(ActionCard):
+
+	@property
+	def tags(self):
+		return super().tags + ["general_action"]
+	
+class FeatCard(ActionCard):
+
+	@property
+	def tags(self):
+		return super().tags + ["feat"]
