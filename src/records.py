@@ -62,7 +62,7 @@ class TTRPGRecords(pd.DataFrame):
             if path.suffix != ".json":
                 raise ValueError(f"Path {path.as_posix()} is not a .json of directory.")
             return [path]
-        elif (path / "index.json").exists():
+        elif (path / "index.json").exists() and path.name != "homebrew":
             index_data = json.loads((path / "index.json").read_text())
             return [path / file_path for file_path in index_data.values()]
         else:
@@ -160,9 +160,6 @@ class TTRPGRecords(pd.DataFrame):
                 entries.extend(TTRPGRecords._extract_entries(sub_entry))
         return entries
 
-
-
-
         
 class TTRPGData(Path):
 
@@ -194,6 +191,16 @@ class Dnd5eToolsData(TTRPGData):
     def spells(self):
         """:TTRPGRecords: DnD 5e Spell Data."""
         return self._fetch_records("data/spells/", "$.spell")
+    
+    @cached_property
+    def items(self):
+        """:TTRPGRecords: DnD 5e Item Data."""
+        return self._fetch_records("data/items.json", "$.item")
+        
+    @cached_property
+    def homebrew_items(self):
+        """:TTRPGRecords: DnD 5e Homebrew Magic Item Data."""
+        return self._fetch_records("homebrew/", "$.item")
     
     @cached_property
     def monsters(self):

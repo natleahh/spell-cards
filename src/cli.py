@@ -3,7 +3,14 @@ import argparse
 from pathlib import Path
 from typing import Callable
 
-import pathfinder2e
+from dnd5e import (
+    get_spell_cards as dnd_spell,
+    get_magic_item_cards as dnd_magic
+)
+from pathfinder2e import (
+    get_spell_cards as pf2e_spell, 
+    get_full_character_cards as pf2e_full
+)
 
 
 class TTRPGParentParser(argparse.ArgumentParser):
@@ -86,15 +93,31 @@ def main(argv: None | list[str] = None):
     pf2espell_subparser = parent_parser.get_subparser(
         name="pf2espells",
         description="Creates Pathfinder 2e Spell cards from provided params.",
-        func=pathfinder2e.get_spell_cards
+        func=pf2e_spell
     )
     add_names_arg(parser=pf2espell_subparser)
 
     parent_parser.get_subparser(
         name="pf2efullcharacter",
         description="Create Pathfinder 2e Spells, Feats and Basic Actions from provided params.",
-        func=pathfinder2e.get_full_character_cards
+        func=pf2e_full
     )
+
+    parent_parser.get_subparser(
+        name="dnd5espells",
+        description="Creates DnD 5th Edition (2014) Spell cards from provided params.",
+        func=dnd_spell
+    )
+    
+    parent_parser.get_subparser(
+        name="dnd5eitems",
+        description="Creates DnD 5th Edition (2014) & Homebrew Magic Items cards from provided params.",
+        func=dnd_magic
+    )
+
+
+    
+    
     args = parent_parser.parse_args(argv)
     kwargs = dict(kw for kw in args._get_kwargs() if kw[0] not in ["func"])
     args.func(**kwargs)

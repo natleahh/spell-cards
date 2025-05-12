@@ -10,8 +10,11 @@ packages = [{include = "*", from="src"}]
 python = "^3.11"
 requests = "^2.32.3"
 pandas = "^2.2.3"
-titlecase = "^2.4.1"
+jsonpath-ng = "^1.7.0"
 
+[virtualenvs]
+create = true
+in-project = true
 
 [tool.poetry.group.dev.dependencies]
 pytest = "^8.3.4"

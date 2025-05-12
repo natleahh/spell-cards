@@ -46,6 +46,10 @@ class CardData(UserDict):
 		""":list[str]: Card Tags."""
 		return []
 
+	@property
+	def footer(self):
+		""":list[str]: Vard Footer."""
+		return []
 
 
 	@classmethod
@@ -69,12 +73,13 @@ class CardData(UserDict):
 					*map("bullet | {}".format, bullets)
 				]
 			case "entries":
+				sub_entries = itertools.chain.from_iterable(map(cls.handle_entry, entry["entries"]))
 				return [
 					f"text | <b>{entry['name']}</b>",
-					*map(cls.handle_entry, entry["entries"])
+					*sub_entries,
 				]
 			case "table":
-				return ["text | <b> See source table </b> | "]
+				return ["text | <b> See source table </b>"]
 			case "inset" | "quote":
 				return []
 			case _:
@@ -114,7 +119,7 @@ class CardData(UserDict):
 			case ["p2e_activity", _, _, content]:
 				tabbed_padding = 2
 			case [_, _]:
-				pass
+				return 0
 			case unhandled:
 				raise ValueError(f"Unhandled entry type case:\n{unhandled}")
 		size = 0
