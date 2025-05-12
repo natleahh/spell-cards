@@ -9,6 +9,4 @@ SCHOOL_MAPPING = {
     "I": "illusion",
     "N": "necromancy",
     "T": "transmutation"
- 
 }
-CUSTOM_SMALL_WORDS = ["without", "into"]
